@@ -264,17 +264,54 @@
     <div id="debug"></div>
 
     <script>
-        console.log('Starting 3D Rat Simulation...');
+        // Enhanced debugging and error checking
+        console.log('🐀 Starting 3D Rat Simulation...');
+        
+        // Check WebGL support
+        function checkWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) {
+                    throw new Error('WebGL not supported');
+                }
+                console.log('✅ WebGL support confirmed');
+                return true;
+            } catch (e) {
+                console.error('❌ WebGL Error:', e);
+                document.body.innerHTML = '<div style="color: red; padding: 20px; font-size: 18px;">❌ WebGL not supported. Please use a modern browser.</div>';
+                return false;
+            }
+        }
+        
+        // Check Three.js loading
+        function checkThreeJS() {
+            if (typeof THREE === 'undefined') {
+                console.error('❌ Three.js failed to load from CDN');
+                document.body.innerHTML = '<div style="color: red; padding: 20px; font-size: 18px;">❌ Three.js failed to load. Please check your internet connection.</div>';
+                return false;
+            }
+            console.log('✅ Three.js loaded successfully, version:', THREE.REVISION);
+            return true;
+        }
         
         // Debug function
         function debug(msg) {
-            console.log(msg);
+            console.log('🔧 ' + msg);
             const debugEl = document.getElementById('debug');
-            debugEl.innerHTML += msg + '<br>';
-            if (debugEl.children.length > 10) {
-                debugEl.innerHTML = '';
+            if (debugEl) {
+                debugEl.innerHTML += '🔧 ' + msg + '<br>';
+                if (debugEl.children.length > 15) {
+                    debugEl.innerHTML = '';
+                }
             }
         }
+
+        // Error handler
+        window.addEventListener('error', (e) => {
+            console.error('❌ JavaScript Error:', e.error);
+            debug('ERROR: ' + e.message + ' at line ' + e.lineno);
+        });
 
         // Simple 3D Rat Class
         class Rat3D {
@@ -373,7 +410,7 @@
                 this.crown.visible = false;
                 this.group.add(this.crown);
                 
-                debug(`Created rat ${this.id} at (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`);
+                debug(`Created rat ${this.id} at (${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)})`);
             }
             
             getColor() {
@@ -939,6 +976,7 @@
         // Simulation Controller
         class SimulationController {
             constructor() {
+                window.simulationStarted = true; // Prevent backup initialization
                 this.environment = new LabEnvironment();
                 this.isRunning = false;
                 this.speed = 3;
@@ -1146,16 +1184,37 @@
         }
 
         // Initialize when Three.js is loaded
-        if (typeof THREE !== 'undefined') {
-            debug('Three.js loaded successfully');
-            document.addEventListener('DOMContentLoaded', () => {
-                debug('DOM ready, starting simulation...');
+        function initializeSimulation() {
+            // Check all prerequisites
+            if (!checkWebGL()) return;
+            if (!checkThreeJS()) return;
+            
+            try {
+                console.log('🚀 All checks passed, initializing simulation...');
+                debug('Starting simulation initialization...');
                 new SimulationController();
-            });
-        } else {
-            debug('ERROR: Three.js failed to load');
-            document.body.innerHTML = '<div style="color: red; padding: 20px; font-size: 20px;">ERROR: Three.js failed to load. Please refresh the page.</div>';
+            } catch (error) {
+                console.error('❌ Simulation initialization failed:', error);
+                debug('FATAL ERROR: ' + error.message);
+                document.body.innerHTML += '<div style="color: red; padding: 20px; background: rgba(255,0,0,0.1); margin: 20px; border-radius: 8px;"><strong>❌ Simulation Failed:</strong><br>' + error.message + '<br><br>Please refresh the page or check console for details.</div>';
+            }
         }
+
+        // Wait for DOM and attempt initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSimulation);
+        } else {
+            // DOM already loaded
+            setTimeout(initializeSimulation, 100);
+        }
+
+        // Backup initialization if DOMContentLoaded doesn't fire
+        setTimeout(() => {
+            if (!window.simulationStarted) {
+                console.log('🔄 Backup initialization triggered...');
+                initializeSimulation();
+            }
+        }, 2000);
     </script>
 </body>
 </html>
