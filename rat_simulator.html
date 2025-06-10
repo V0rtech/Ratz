@@ -7,149 +7,46 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: #1a1a1a;
-            color: white;
-            overflow: hidden;
-        }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: white; overflow: hidden; }
         
         .ui-panel {
-            position: absolute;
-            background: rgba(0,0,0,0.8);
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 15px;
-            backdrop-filter: blur(5px);
+            position: absolute; background: rgba(0,0,0,0.8); border: 1px solid #333;
+            border-radius: 8px; padding: 15px; backdrop-filter: blur(5px);
         }
+        .controls { top: 20px; left: 20px; width: 280px; max-height: 90vh; overflow-y: auto; }
+        .stats { top: 20px; right: 20px; width: 300px; }
+        .header { top: 20px; left: 50%; transform: translateX(-50%); text-align: center; padding: 10px 20px; }
         
-        .controls {
-            top: 20px;
-            left: 20px;
-            width: 280px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .stats {
-            top: 20px;
-            right: 20px;
-            width: 300px;
-        }
-        
-        .header {
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            padding: 10px 20px;
-        }
-        
-        .control-group {
-            margin-bottom: 20px;
-        }
-        
-        .control-group h3 {
-            color: #4ecdc4;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        
-        .slider-row {
-            margin-bottom: 12px;
-        }
-        
-        .slider-row label {
-            display: block;
-            font-size: 0.9em;
-            margin-bottom: 3px;
-        }
-        
-        .slider {
-            width: 100%;
-            height: 20px;
-        }
+        .control-group { margin-bottom: 20px; }
+        .control-group h3 { color: #4ecdc4; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; }
+        .slider-row { margin-bottom: 12px; }
+        .slider-row label { display: block; font-size: 0.9em; margin-bottom: 3px; }
+        .slider, select { width: 100%; height: 25px; background: rgba(255,255,255,0.1); border: 1px solid #333; border-radius: 4px; color: white; }
         
         .button {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-            margin: 2px;
-            font-size: 0.9em;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4); border: none; padding: 8px 16px;
+            border-radius: 4px; color: white; cursor: pointer; margin: 2px; font-size: 0.9em;
         }
+        .button:hover { opacity: 0.8; }
         
-        .button:hover {
-            opacity: 0.8;
-        }
+        .stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        .stat-value { color: #4ecdc4; font-weight: bold; }
         
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #333;
-        }
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .status-item { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; text-align: center; font-size: 0.8em; }
+        .status-item.critical { background: rgba(255,0,0,0.3); }
         
-        .stat-value {
-            color: #4ecdc4;
-            font-weight: bold;
-        }
-        
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .status-item {
-            background: rgba(255,255,255,0.1);
-            padding: 8px;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 0.8em;
-        }
-        
-        .status-item.critical {
-            background: rgba(255,0,0,0.3);
-        }
-        
-        .alert {
-            background: rgba(255,0,0,0.2);
-            border: 1px solid #f44336;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            display: none;
-            font-size: 0.85em;
-        }
-        
+        .alert { background: rgba(255,0,0,0.2); border: 1px solid #f44336; border-radius: 4px; padding: 10px; margin-top: 10px; display: none; font-size: 0.85em; }
         .alert.show { display: block; }
         
         .camera-info {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.6);
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.8em;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; font-size: 0.8em;
         }
         
         #debug {
-            position: absolute;
-            top: 100px;
-            left: 20px;
-            background: rgba(0,0,0,0.9);
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.8em;
-            max-width: 400px;
+            position: absolute; top: 100px; left: 20px; background: rgba(0,0,0,0.9); padding: 10px;
+            border-radius: 4px; font-family: monospace; font-size: 0.8em; max-width: 400px; max-height: 200px; overflow-y: auto;
         }
     </style>
 </head>
@@ -163,16 +60,23 @@
         <div class="control-group">
             <h3>Environment</h3>
             <div class="slider-row">
+                <label>Environment Type:</label>
+                <select id="environmentType">
+                    <option value="lab">Laboratory</option>
+                    <option value="forest">Forest</option>
+                    <option value="urban">Urban Alley</option>
+                    <option value="sewer">Sewer System</option>
+                    <option value="barn">Farm Barn</option>
+                    <option value="universe25">Universe 25</option>
+                </select>
+            </div>
+            <div class="slider-row">
                 <label>Carrying Capacity: <span id="capacityVal">100</span></label>
                 <input type="range" min="20" max="300" value="100" class="slider" id="capacity">
             </div>
             <div class="slider-row">
                 <label>Food Level: <span id="foodVal">100%</span></label>
                 <input type="range" min="20" max="200" value="100" class="slider" id="food">
-            </div>
-            <div class="slider-row">
-                <label>Stress Factor: <span id="stressVal">Normal</span></label>
-                <input type="range" min="50" max="200" value="100" class="slider" id="stress">
             </div>
         </div>
 
@@ -197,123 +101,43 @@
 
     <div class="ui-panel stats">
         <h3 style="color: #4ecdc4; margin-bottom: 10px;">Population Stats</h3>
-        <div class="stat-row">
-            <span>Total Population:</span>
-            <span class="stat-value" id="totalPop">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Adults:</span>
-            <span class="stat-value" id="adults">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Juveniles:</span>
-            <span class="stat-value" id="juveniles">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Births/Day:</span>
-            <span class="stat-value" id="births">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Deaths/Day:</span>
-            <span class="stat-value" id="deaths">0</span>
-        </div>
+        <div class="stat-row"><span>Total Population:</span><span class="stat-value" id="totalPop">0</span></div>
+        <div class="stat-row"><span>Adults:</span><span class="stat-value" id="adults">0</span></div>
+        <div class="stat-row"><span>Juveniles:</span><span class="stat-value" id="juveniles">0</span></div>
+        <div class="stat-row"><span>Births/Day:</span><span class="stat-value" id="births">0</span></div>
+        <div class="stat-row"><span>Deaths/Day:</span><span class="stat-value" id="deaths">0</span></div>
 
         <h3 style="color: #4ecdc4; margin: 15px 0 10px 0;">Behavioral Status</h3>
         <div class="status-grid">
-            <div class="status-item" id="stressStatus">
-                <div>Stress</div>
-                <div id="stressLevel">Normal</div>
-            </div>
-            <div class="status-item" id="aggressionStatus">
-                <div>Aggression</div>
-                <div id="aggressionLevel">Low</div>
-            </div>
-            <div class="status-item" id="reproductionStatus">
-                <div>Reproduction</div>
-                <div id="reproductionLevel">Normal</div>
-            </div>
-            <div class="status-item" id="cannibalismStatus">
-                <div>Cannibalism</div>
-                <div id="cannibalismLevel">None</div>
-            </div>
+            <div class="status-item" id="stressStatus"><div>Stress</div><div id="stressLevel">Normal</div></div>
+            <div class="status-item" id="aggressionStatus"><div>Aggression</div><div id="aggressionLevel">Low</div></div>
+            <div class="status-item" id="reproductionStatus"><div>Reproduction</div><div id="reproductionLevel">Normal</div></div>
+            <div class="status-item" id="cannibalismStatus"><div>Cannibalism</div><div id="cannibalismLevel">None</div></div>
         </div>
 
         <h3 style="color: #4ecdc4; margin: 15px 0 10px 0;">Research Data</h3>
-        <div class="stat-row">
-            <span>Density:</span>
-            <span class="stat-value" id="density">0%</span>
-        </div>
-        <div class="stat-row">
-            <span>Avg Interactions:</span>
-            <span class="stat-value" id="interactions">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Stress Hormone:</span>
-            <span class="stat-value" id="cortisol">100%</span>
-        </div>
+        <div class="stat-row"><span>Density:</span><span class="stat-value" id="density">0%</span></div>
+        <div class="stat-row"><span>Avg Interactions:</span><span class="stat-value" id="interactions">0</span></div>
+        <div class="stat-row"><span>Stress Hormone:</span><span class="stat-value" id="cortisol">100%</span></div>
 
-        <div class="alert" id="alertBox">
-            <strong>Alert:</strong> <span id="alertMsg"></span>
-        </div>
+        <div class="alert" id="alertBox"><strong>Alert:</strong> <span id="alertMsg"></span></div>
     </div>
 
-    <div class="camera-info">
-        Mouse: Rotate • Wheel: Zoom • WASD: Move
-    </div>
-
+    <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan</div>
     <div id="debug"></div>
 
     <script>
-        // Enhanced debugging and error checking
-        console.log('🐀 Starting 3D Rat Simulation...');
-        
-        // Check WebGL support
-        function checkWebGL() {
-            try {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (!gl) {
-                    throw new Error('WebGL not supported');
-                }
-                console.log('✅ WebGL support confirmed');
-                return true;
-            } catch (e) {
-                console.error('❌ WebGL Error:', e);
-                document.body.innerHTML = '<div style="color: red; padding: 20px; font-size: 18px;">❌ WebGL not supported. Please use a modern browser.</div>';
-                return false;
-            }
-        }
-        
-        // Check Three.js loading
-        function checkThreeJS() {
-            if (typeof THREE === 'undefined') {
-                console.error('❌ Three.js failed to load from CDN');
-                document.body.innerHTML = '<div style="color: red; padding: 20px; font-size: 18px;">❌ Three.js failed to load. Please check your internet connection.</div>';
-                return false;
-            }
-            console.log('✅ Three.js loaded successfully, version:', THREE.REVISION);
-            return true;
-        }
-        
-        // Debug function
         function debug(msg) {
             console.log('🔧 ' + msg);
             const debugEl = document.getElementById('debug');
             if (debugEl) {
                 debugEl.innerHTML += '🔧 ' + msg + '<br>';
-                if (debugEl.children.length > 15) {
-                    debugEl.innerHTML = '';
+                if (debugEl.innerHTML.split('<br>').length > 15) {
+                    debugEl.innerHTML = debugEl.innerHTML.split('<br>').slice(-10).join('<br>');
                 }
             }
         }
 
-        // Error handler
-        window.addEventListener('error', (e) => {
-            console.error('❌ JavaScript Error:', e.error);
-            debug('ERROR: ' + e.message + ' at line ' + e.lineno);
-        });
-
-        // Simple 3D Rat Class
         class Rat3D {
             constructor(x, y, z, id, scene) {
                 this.id = id;
@@ -322,7 +146,6 @@
                 this.velocity = new THREE.Vector3();
                 this.target = new THREE.Vector3(x, y, z);
                 
-                // Behavioral properties from research
                 this.age = Math.random() * 100;
                 this.energy = 80 + Math.random() * 20;
                 this.health = 90 + Math.random() * 10;
@@ -334,7 +157,6 @@
                 this.reproductiveAge = this.sex === 'female' ? 45 : 40;
                 this.estrusDay = Math.random() * 5;
                 this.gestationDays = 0;
-                this.pregnancies = 0;
                 
                 this.state = 'foraging';
                 this.socialInteractions = 0;
@@ -350,23 +172,19 @@
             createModel() {
                 this.group = new THREE.Group();
                 
-                // Main body
                 const bodyGeo = new THREE.SphereGeometry(0.12, 8, 6);
                 bodyGeo.scale(1.5, 0.8, 1.2);
-                
                 const bodyMat = new THREE.MeshLambertMaterial({ color: this.getColor() });
                 this.bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
                 this.bodyMesh.position.y = 0.08;
                 this.group.add(this.bodyMesh);
                 
-                // Head
                 const headGeo = new THREE.SphereGeometry(0.07, 6, 5);
                 const headMat = new THREE.MeshLambertMaterial({ color: this.getColor() });
                 this.headMesh = new THREE.Mesh(headGeo, headMat);
                 this.headMesh.position.set(0.15, 0.1, 0);
                 this.group.add(this.headMesh);
                 
-                // Ears
                 const earGeo = new THREE.SphereGeometry(0.025, 4, 3);
                 const earMat = new THREE.MeshLambertMaterial({ color: 0xffb6c1 });
                 
@@ -378,7 +196,6 @@
                 rightEar.position.set(0.18, 0.16, 0.04);
                 this.group.add(rightEar);
                 
-                // Tail
                 const tailGeo = new THREE.CylinderGeometry(0.008, 0.015, 0.25, 4);
                 const tailMat = new THREE.MeshLambertMaterial({ color: 0xd2b48c });
                 const tail = new THREE.Mesh(tailGeo, tailMat);
@@ -386,40 +203,31 @@
                 tail.rotation.z = Math.PI / 2;
                 this.group.add(tail);
                 
-                // Position the group
                 this.group.position.copy(this.position);
                 this.scene.add(this.group);
                 
-                // Stress indicator
                 const stressGeo = new THREE.RingGeometry(0.15, 0.18, 8);
-                const stressMat = new THREE.MeshBasicMaterial({ 
-                    color: 0xff0000, 
-                    transparent: true, 
-                    opacity: 0 
-                });
+                const stressMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0 });
                 this.stressRing = new THREE.Mesh(stressGeo, stressMat);
                 this.stressRing.rotation.x = -Math.PI / 2;
                 this.stressRing.position.y = 0.01;
                 this.group.add(this.stressRing);
                 
-                // Dominance indicator
                 const crownGeo = new THREE.ConeGeometry(0.02, 0.04, 4);
                 const crownMat = new THREE.MeshLambertMaterial({ color: 0x2196f3 });
                 this.crown = new THREE.Mesh(crownGeo, crownMat);
                 this.crown.position.set(0.15, 0.2, 0);
                 this.crown.visible = false;
                 this.group.add(this.crown);
-                
-                debug(`Created rat ${this.id} at (${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)})`);
             }
             
             getColor() {
-                if (this.age < 21) return 0xffeb3b; // yellow juveniles
-                if (this.stress > 70) return 0x8b0000; // dark red stressed
-                if (this.state === 'mating') return 0xdc143c; // crimson mating
-                if (this.dominance > 0.8) return 0x4169e1; // blue alphas
-                if (this.sex === 'female' && this.gestationDays > 0) return 0x9370db; // purple pregnant
-                return 0x8b4513; // brown normal
+                if (this.age < 21) return 0xffeb3b;
+                if (this.stress > 70) return 0x8b0000;
+                if (this.state === 'mating') return 0xdc143c;
+                if (this.dominance > 0.8) return 0x4169e1;
+                if (this.sex === 'female' && this.gestationDays > 0) return 0x9370db;
+                return 0x8b4513;
             }
             
             update(deltaTime, environment) {
@@ -431,8 +239,7 @@
             }
             
             updatePhysiology(deltaTime, environment) {
-                // Energy consumption based on state
-                let consumption = 0.15; // basal
+                let consumption = 0.15;
                 if (this.state === 'foraging') consumption = 0.3;
                 if (this.state === 'fleeing') consumption = 1.2;
                 if (this.state === 'mating') consumption = 0.6;
@@ -440,15 +247,12 @@
                 this.energy -= consumption * deltaTime;
                 this.energy = Math.max(0, Math.min(100, this.energy));
                 
-                // Stress from density and social interactions
                 let densityStress = Math.max(0, (environment.getPopulationDensity() - 0.75) * 150);
                 let socialStress = Math.max(0, (this.socialInteractions - 12) * 8);
                 this.stress = Math.min(100, densityStress + socialStress + (environment.generalStress || 0));
                 
-                // Corticosterone response
                 this.corticosterone = 100 + (this.stress * 1.3);
                 
-                // Health effects
                 if (this.stress > 70) this.health -= 0.15 * deltaTime;
                 if (this.state === 'resting' && this.energy > 60) {
                     this.health += 0.08 * deltaTime;
@@ -456,7 +260,6 @@
                 }
                 this.health = Math.max(0, Math.min(100, this.health));
                 
-                // Reproductive cycle for females
                 if (this.sex === 'female' && this.age > this.reproductiveAge) {
                     this.estrusDay += deltaTime;
                     if (this.estrusDay > 5) this.estrusDay = 0;
@@ -476,7 +279,6 @@
                 if (this.lastStateChange > 0.8) {
                     let prob = Math.random();
                     
-                    // Priority behaviors
                     if (this.energy < 25) {
                         this.state = 'foraging';
                     } else if (this.stress > 75) {
@@ -486,18 +288,15 @@
                     } else if (this.canMate(environment) && prob < 0.25) {
                         this.state = 'mating';
                     } else {
-                        // Normal transitions
                         if (this.state === 'resting' && prob < 0.15) {
                             this.state = 'foraging';
                         } else if (this.state === 'foraging' && prob < 0.08) {
                             this.state = 'resting';
                         }
                     }
-                    
                     this.lastStateChange = 0;
                 }
                 
-                // Reset social interactions periodically
                 if (Math.random() < 0.015) {
                     this.socialInteractions = 0;
                 }
@@ -523,70 +322,45 @@
                 let survivalRate = 0.75;
                 if (environment.getPopulationDensity() > 0.9) survivalRate = 0.35;
                 if (this.stress > 50) survivalRate *= 0.7;
-                if (this.health < 50) survivalRate *= 0.6;
-                
-                let cannibalismRisk = 0;
-                if (environment.getPopulationDensity() > 0.85 && this.stress > 65) {
-                    cannibalismRisk = 0.5;
-                } else if (environment.getPopulationDensity() > 0.75) {
-                    cannibalismRisk = 0.15;
-                }
                 
                 let survivors = 0;
                 for (let i = 0; i < litterSize; i++) {
-                    if (Math.random() < survivalRate && Math.random() > cannibalismRisk) {
+                    if (Math.random() < survivalRate) {
                         survivors++;
                         let newPos = this.position.clone();
                         newPos.x += (Math.random() - 0.5) * 0.4;
                         newPos.z += (Math.random() - 0.5) * 0.4;
-                        newPos.x = Math.max(-4, Math.min(4, newPos.x));
-                        newPos.z = Math.max(-4, Math.min(4, newPos.z));
                         environment.addRat(new Rat3D(newPos.x, newPos.y, newPos.z, environment.nextId++, environment.scene));
                     }
                 }
                 
                 environment.totalBirths += survivors;
                 environment.dailyBirths += survivors;
-                
-                this.pregnancies++;
                 this.gestationDays = 0;
                 this.energy -= 25;
                 this.health -= 8;
-                
-                debug(`Rat ${this.id} gave birth to ${survivors}/${litterSize} pups`);
             }
             
             updateMovement(deltaTime) {
                 this.lastTargetChange += deltaTime;
                 
-                // Set new target occasionally
                 if (this.lastTargetChange > 1 + Math.random() * 2) {
-                    let speed = 0.8;
-                    if (this.state === 'foraging') speed = 1.2;
-                    if (this.state === 'fleeing') speed = 2.0;
-                    if (this.state === 'resting') speed = 0.3;
-                    
                     if (this.state === 'fleeing') {
-                        // Flee away from center or high-density areas
                         let fleeDir = this.position.clone().normalize();
                         if (fleeDir.length() === 0) fleeDir.set(Math.random() - 0.5, 0, Math.random() - 0.5);
                         this.target.copy(this.position).add(fleeDir.multiplyScalar(1.5));
                     } else {
-                        // Move within territory
                         this.target.copy(this.territoryCenter);
                         this.target.x += (Math.random() - 0.5) * this.territoryRadius * 2;
                         this.target.z += (Math.random() - 0.5) * this.territoryRadius * 2;
                     }
                     
-                    // Keep within bounds
                     this.target.x = Math.max(-4, Math.min(4, this.target.x));
                     this.target.z = Math.max(-4, Math.min(4, this.target.z));
                     this.target.y = 0.08;
-                    
                     this.lastTargetChange = 0;
                 }
                 
-                // Move towards target
                 let direction = this.target.clone().sub(this.position);
                 let distance = direction.length();
                 
@@ -605,7 +379,6 @@
                 this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
                 this.group.position.copy(this.position);
                 
-                // Rotate to face movement
                 if (this.velocity.length() > 0.05) {
                     let angle = Math.atan2(this.velocity.x, this.velocity.z);
                     this.group.rotation.y = angle;
@@ -613,12 +386,10 @@
             }
             
             updateVisuals() {
-                // Update colors
                 let newColor = this.getColor();
                 this.bodyMesh.material.color.setHex(newColor);
                 this.headMesh.material.color.setHex(newColor);
                 
-                // Stress indicator
                 if (this.stress > 40) {
                     this.stressRing.material.opacity = (this.stress - 40) / 60 * 0.6;
                     this.stressRing.visible = true;
@@ -626,7 +397,6 @@
                     this.stressRing.visible = false;
                 }
                 
-                // Dominance indicator
                 this.crown.visible = this.dominance > 0.8;
             }
             
@@ -646,18 +416,16 @@
             }
         }
 
-        // Lab Environment
-        class LabEnvironment {
+        class Environment {
             constructor() {
                 this.rats = [];
                 this.nextId = 1;
+                this.environmentType = 'lab';
                 
-                // Parameters
                 this.carryingCapacity = 100;
                 this.foodAvailability = 1.0;
                 this.generalStress = 0;
                 
-                // Stats
                 this.totalBirths = 0;
                 this.totalDeaths = 0;
                 this.dailyBirths = 0;
@@ -667,43 +435,33 @@
                 this.initScene();
                 this.createEnvironment();
                 this.initPopulation();
-                
-                debug('Lab environment initialized');
+                debug('Environment initialized');
             }
             
             initScene() {
-                // Scene
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x2a2a2a);
+                this.scene.background = new THREE.Color(0xf0f0f0);
                 
-                // Camera
                 this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
                 this.camera.position.set(6, 8, 6);
                 this.camera.lookAt(0, 0, 0);
                 
-                // Renderer
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.shadowMap.enabled = true;
                 this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 document.body.appendChild(this.renderer.domElement);
                 
-                // Lights
-                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-                this.scene.add(ambientLight);
+                this.ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(this.ambientLight);
                 
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                directionalLight.position.set(8, 10, 8);
-                directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 1024;
-                directionalLight.shadow.mapSize.height = 1024;
-                this.scene.add(directionalLight);
+                this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                this.directionalLight.position.set(8, 10, 8);
+                this.directionalLight.castShadow = true;
+                this.scene.add(this.directionalLight);
                 
-                // Simple camera controls
                 this.setupControls();
-                
                 window.addEventListener('resize', () => this.onResize(), false);
-                
                 debug('3D scene initialized');
             }
             
@@ -753,67 +511,192 @@
             }
             
             createEnvironment() {
-                // Floor
+                const objectsToRemove = [];
+                this.scene.traverse((child) => {
+                    if (child.userData && child.userData.isEnvironment) {
+                        objectsToRemove.push(child);
+                    }
+                });
+                objectsToRemove.forEach(obj => this.scene.remove(obj));
+                
+                switch (this.environmentType) {
+                    case 'lab': this.createLabEnvironment(); break;
+                    case 'forest': this.createForestEnvironment(); break;
+                    case 'urban': this.createUrbanEnvironment(); break;
+                    case 'sewer': this.createSewerEnvironment(); break;
+                    case 'barn': this.createBarnEnvironment(); break;
+                    case 'universe25': this.createUniverse25Environment(); break;
+                }
+                
+                debug(`Environment created: ${this.environmentType}`);
+            }
+            
+            createLabEnvironment() {
+                this.scene.background = new THREE.Color(0xf0f0f0);
+                
                 const floorGeo = new THREE.PlaneGeometry(10, 10);
-                const floorMat = new THREE.MeshLambertMaterial({ color: 0xf5f5f5 });
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
                 floor.rotation.x = -Math.PI / 2;
                 floor.receiveShadow = true;
+                floor.userData = { isEnvironment: true };
                 this.scene.add(floor);
                 
-                // Walls
-                const wallMat = new THREE.MeshLambertMaterial({ 
-                    color: 0xdddddd, 
-                    transparent: true, 
-                    opacity: 0.4 
-                });
+                this.createWalls(0xdddddd, 0.4, 2, 10);
+                this.createFoodStations([[-2.5, 0.05, -2.5], [2.5, 0.05, -2.5], [-2.5, 0.05, 2.5], [2.5, 0.05, 2.5]], 0xffd700);
+            }
+            
+            createForestEnvironment() {
+                this.scene.background = new THREE.Color(0x228b22);
                 
-                const wallHeight = 2;
+                const floorGeo = new THREE.PlaneGeometry(15, 15);
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0x3e2723 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.userData = { isEnvironment: true };
+                this.scene.add(floor);
+                
+                const treePositions = [[-4, 0, -4], [4, 0, -3], [-3, 0, 4], [5, 0, 5], [-6, 0, 1]];
+                treePositions.forEach(pos => {
+                    const trunkGeo = new THREE.CylinderGeometry(0.2, 0.35, 4, 12);
+                    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a3728 });
+                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                    trunk.position.set(pos[0], 2, pos[2]);
+                    trunk.userData = { isEnvironment: true };
+                    this.scene.add(trunk);
+                    
+                    const foliageGeo = new THREE.SphereGeometry(1.8, 12, 8);
+                    const foliageMat = new THREE.MeshLambertMaterial({ color: 0x1a4a1a });
+                    const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+                    foliage.position.set(pos[0], 4.5, pos[2]);
+                    foliage.userData = { isEnvironment: true };
+                    this.scene.add(foliage);
+                });
+            }
+            
+            createUrbanEnvironment() {
+                this.scene.background = new THREE.Color(0x1a1a1a);
+                
+                const floorGeo = new THREE.PlaneGeometry(12, 8);
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.userData = { isEnvironment: true };
+                this.scene.add(floor);
+                
+                this.createWalls(0x8b4513, 1.0, 3, 12);
+                
+                const dumpsterGeo = new THREE.BoxGeometry(2, 1.6, 1.2);
+                const dumpsterMat = new THREE.MeshLambertMaterial({ color: 0x2f4f2f });
+                const dumpster = new THREE.Mesh(dumpsterGeo, dumpsterMat);
+                dumpster.position.set(-4, 0.8, -2);
+                dumpster.userData = { isEnvironment: true };
+                this.scene.add(dumpster);
+            }
+            
+            createSewerEnvironment() {
+                this.scene.background = new THREE.Color(0x0f0f0f);
+                
+                const floorGeo = new THREE.PlaneGeometry(10, 10);
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0x2d2d2d });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.userData = { isEnvironment: true };
+                this.scene.add(floor);
+                
+                const tunnelGeo = new THREE.CylinderGeometry(5, 5, 10, 16, 1, true, 0, Math.PI);
+                const tunnelMat = new THREE.MeshLambertMaterial({ color: 0x3a3a3a, side: THREE.BackSide });
+                const tunnel = new THREE.Mesh(tunnelGeo, tunnelMat);
+                tunnel.rotation.z = Math.PI / 2;
+                tunnel.position.y = 2.5;
+                tunnel.userData = { isEnvironment: true };
+                this.scene.add(tunnel);
+            }
+            
+            createBarnEnvironment() {
+                this.scene.background = new THREE.Color(0x8b4513);
+                
+                const floorGeo = new THREE.PlaneGeometry(20, 15);
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.userData = { isEnvironment: true };
+                this.scene.add(floor);
+                
+                this.createWalls(0x8b4513, 1.0, 4, 20);
+                
+                const hayGeo = new THREE.BoxGeometry(2.5, 1.5, 2);
+                const hayMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+                const hay = new THREE.Mesh(hayGeo, hayMat);
+                hay.position.set(-6, 0.75, -4);
+                hay.userData = { isEnvironment: true };
+                this.scene.add(hay);
+            }
+            
+            createUniverse25Environment() {
+                this.scene.background = new THREE.Color(0xe0e0e0);
+                
+                const floorGeo = new THREE.PlaneGeometry(4, 4);
+                const floorMat = new THREE.MeshLambertMaterial({ color: 0xf8f8f8 });
+                const floor = new THREE.Mesh(floorGeo, floorMat);
+                floor.rotation.x = -Math.PI / 2;
+                floor.userData = { isEnvironment: true };
+                this.scene.add(floor);
+                
+                this.createWalls(0xf0f0f0, 1.0, 3, 4);
+                
+                const centerFoodGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
+                const centerFoodMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+                const centerFood = new THREE.Mesh(centerFoodGeo, centerFoodMat);
+                centerFood.position.set(0, 0.15, 0);
+                centerFood.userData = { isEnvironment: true };
+                this.scene.add(centerFood);
+            }
+            
+            createWalls(color, opacity, height, size) {
+                const wallMat = new THREE.MeshLambertMaterial({ color: color, transparent: opacity < 1, opacity: opacity });
                 const wallThickness = 0.1;
                 
-                // Create 4 walls
                 const walls = [
-                    { pos: [0, wallHeight/2, 5], size: [10, wallHeight, wallThickness] },
-                    { pos: [0, wallHeight/2, -5], size: [10, wallHeight, wallThickness] },
-                    { pos: [5, wallHeight/2, 0], size: [wallThickness, wallHeight, 10] },
-                    { pos: [-5, wallHeight/2, 0], size: [wallThickness, wallHeight, 10] }
+                    { pos: [0, height/2, size/2], size: [size, height, wallThickness] },
+                    { pos: [0, height/2, -size/2], size: [size, height, wallThickness] },
+                    { pos: [size/2, height/2, 0], size: [wallThickness, height, size] },
+                    { pos: [-size/2, height/2, 0], size: [wallThickness, height, size] }
                 ];
                 
                 walls.forEach(wall => {
                     const wallGeo = new THREE.BoxGeometry(...wall.size);
                     const wallMesh = new THREE.Mesh(wallGeo, wallMat);
                     wallMesh.position.set(...wall.pos);
+                    wallMesh.userData = { isEnvironment: true };
                     this.scene.add(wallMesh);
                 });
-                
-                // Food stations
-                const foodPositions = [[-2.5, 0.05, -2.5], [2.5, 0.05, -2.5], [-2.5, 0.05, 2.5], [2.5, 0.05, 2.5]];
-                
-                foodPositions.forEach(pos => {
+            }
+            
+            createFoodStations(positions, color) {
+                positions.forEach(pos => {
                     const stationGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8);
-                    const stationMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+                    const stationMat = new THREE.MeshLambertMaterial({ color: color });
                     const station = new THREE.Mesh(stationGeo, stationMat);
                     station.position.set(...pos);
-                    station.castShadow = true;
+                    station.userData = { isEnvironment: true };
                     this.scene.add(station);
                 });
+            }
+            
+            changeEnvironment(newType) {
+                this.environmentType = newType;
+                this.createEnvironment();
                 
-                // Water dispensers
-                const waterPositions = [[-3.5, 0.2, 0], [3.5, 0.2, 0]];
+                const sizes = { lab: 10, forest: 15, urban: 12, sewer: 10, barn: 20, universe25: 4 };
+                const distance = (sizes[newType] || 10) * 0.8;
+                this.camera.position.set(distance, distance * 0.6, distance);
+                this.camera.lookAt(0, 0, 0);
                 
-                waterPositions.forEach(pos => {
-                    const dispenserGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6);
-                    const dispenserMat = new THREE.MeshLambertMaterial({ color: 0x4169e1 });
-                    const dispenser = new THREE.Mesh(dispenserGeo, dispenserMat);
-                    dispenser.position.set(...pos);
-                    this.scene.add(dispenser);
-                });
-                
-                debug('Environment created');
+                debug(`Environment changed to: ${newType}`);
             }
             
             initPopulation() {
-                // Start with 6 rats (optimal group size from research)
                 for (let i = 0; i < 6; i++) {
                     let x = (Math.random() - 0.5) * 3;
                     let z = (Math.random() - 0.5) * 3;
@@ -833,12 +716,10 @@
             update(deltaTime) {
                 this.dayCounter += deltaTime;
                 
-                // Update all rats
                 for (let i = this.rats.length - 1; i >= 0; i--) {
                     let rat = this.rats[i];
                     rat.update(deltaTime, this);
                     
-                    // Check for death
                     if (rat.shouldDie(this)) {
                         rat.destroy();
                         this.rats.splice(i, 1);
@@ -847,13 +728,9 @@
                     }
                 }
                 
-                // Calculate social interactions
                 this.calculateSocialInteractions();
-                
-                // Process mating
                 this.processMating();
                 
-                // Daily reset
                 if (this.dayCounter >= 1) {
                     this.dailyBirths = 0;
                     this.dailyDeaths = 0;
@@ -864,7 +741,6 @@
             calculateSocialInteractions() {
                 for (let rat of this.rats) {
                     rat.socialInteractions = 0;
-                    
                     for (let other of this.rats) {
                         if (rat !== other) {
                             let distance = rat.position.distanceTo(other.position);
@@ -896,32 +772,26 @@
             }
             
             attemptMating(male, female) {
-                // Mating success based on research
                 let successProb = male.dominance > 0.8 ? 0.85 : 0.25;
                 
                 if (this.getPopulationDensity() > 0.8) successProb *= 0.6;
                 if (male.stress > 50 || female.stress > 50) successProb *= 0.7;
                 
                 if (Math.random() < successProb && female.gestationDays === 0) {
-                    female.gestationDays = 22; // 22-day gestation from research
+                    female.gestationDays = 22;
                     male.state = 'resting';
                     female.state = 'resting';
-                    
                     male.energy -= 4;
                     female.energy -= 2;
-                    
-                    debug(`Mating successful: Rat ${male.id} (α=${male.dominance.toFixed(2)}) + Rat ${female.id}`);
                 }
             }
             
             getStatistics() {
                 if (this.rats.length === 0) {
                     return {
-                        totalPopulation: 0, adults: 0, juveniles: 0, 
-                        birthRate: 0, deathRate: 0, densityPercent: 0,
-                        avgStress: 0, avgCorticosterone: 100, avgSocialInteractions: 0,
-                        stressLevel: 'Normal', aggressionLevel: 'Low', 
-                        reproductionLevel: 'Normal', cannibalismLevel: 'None'
+                        totalPopulation: 0, adults: 0, juveniles: 0, birthRate: 0, deathRate: 0,
+                        densityPercent: 0, avgStress: 0, avgCorticosterone: 100, avgSocialInteractions: 0,
+                        stressLevel: 'Normal', aggressionLevel: 'Low', reproductionLevel: 'Normal', cannibalismLevel: 'None'
                     };
                 }
                 
@@ -931,28 +801,19 @@
                 let avgCorticosterone = this.rats.reduce((sum, r) => sum + r.corticosterone, 0) / this.rats.length;
                 let avgSocialInteractions = this.rats.reduce((sum, r) => sum + r.socialInteractions, 0) / this.rats.length;
                 
-                // Behavioral indicators based on research thresholds
                 let stressLevel = avgStress < 30 ? 'Normal' : avgStress < 60 ? 'Moderate' : 'Critical';
                 let aggressionLevel = avgSocialInteractions < 8 ? 'Low' : avgSocialInteractions < 12 ? 'Moderate' : 'High';
-                let reproductionLevel = this.getPopulationDensity() < 0.75 ? 'Normal' : 
-                                      this.getPopulationDensity() < 0.9 ? 'Reduced' : 'Failing';
-                let cannibalismLevel = (this.getPopulationDensity() > 0.9 && avgStress > 70) ? 'High' : 
-                                      (this.getPopulationDensity() > 0.75) ? 'Moderate' : 'None';
+                let reproductionLevel = this.getPopulationDensity() < 0.75 ? 'Normal' : this.getPopulationDensity() < 0.9 ? 'Reduced' : 'Failing';
+                let cannibalismLevel = (this.getPopulationDensity() > 0.9 && avgStress > 70) ? 'High' : (this.getPopulationDensity() > 0.75) ? 'Moderate' : 'None';
                 
                 return {
-                    totalPopulation: this.rats.length,
-                    adults: adults,
-                    juveniles: juveniles,
-                    birthRate: this.dailyBirths,
-                    deathRate: this.dailyDeaths,
+                    totalPopulation: this.rats.length, adults: adults, juveniles: juveniles,
+                    birthRate: this.dailyBirths, deathRate: this.dailyDeaths,
                     densityPercent: Math.round(this.getPopulationDensity() * 100),
-                    avgStress: Math.round(avgStress),
-                    avgCorticosterone: Math.round(avgCorticosterone),
+                    avgStress: Math.round(avgStress), avgCorticosterone: Math.round(avgCorticosterone),
                     avgSocialInteractions: Math.round(avgSocialInteractions * 10) / 10,
-                    stressLevel: stressLevel,
-                    aggressionLevel: aggressionLevel,
-                    reproductionLevel: reproductionLevel,
-                    cannibalismLevel: cannibalismLevel
+                    stressLevel: stressLevel, aggressionLevel: aggressionLevel,
+                    reproductionLevel: reproductionLevel, cannibalismLevel: cannibalismLevel
                 };
             }
             
@@ -973,11 +834,9 @@
             }
         }
 
-        // Simulation Controller
         class SimulationController {
             constructor() {
-                window.simulationStarted = true; // Prevent backup initialization
-                this.environment = new LabEnvironment();
+                this.environment = new Environment();
                 this.isRunning = false;
                 this.speed = 3;
                 this.lastTime = 0;
@@ -986,17 +845,11 @@
                 this.startRenderLoop();
                 this.updateDisplay();
                 
+                setTimeout(() => this.start(), 1000);
                 debug('Simulation controller ready');
-                
-                // Auto-start after short delay
-                setTimeout(() => {
-                    this.start();
-                    debug('Auto-started simulation');
-                }, 1000);
             }
             
             setupUI() {
-                // Slider controls
                 const sliders = {
                     capacity: (val) => {
                         document.getElementById('capacityVal').textContent = val;
@@ -1004,11 +857,6 @@
                     },
                     food: (val) => {
                         document.getElementById('foodVal').textContent = val + '%';
-                        this.updateParams();
-                    },
-                    stress: (val) => {
-                        let level = val < 80 ? 'Low' : val < 120 ? 'Normal' : 'High';
-                        document.getElementById('stressVal').textContent = level;
                         this.updateParams();
                     },
                     speed: (val) => {
@@ -1021,28 +869,32 @@
                     const slider = document.getElementById(id);
                     if (slider) {
                         slider.addEventListener('input', () => sliders[id](slider.value));
-                        sliders[id](slider.value); // Initialize
+                        sliders[id](slider.value);
                     }
                 });
                 
-                // Button controls
+                const envSelector = document.getElementById('environmentType');
+                if (envSelector) {
+                    envSelector.addEventListener('change', (e) => {
+                        this.environment.changeEnvironment(e.target.value);
+                        this.updateParams();
+                    });
+                }
+                
                 document.getElementById('startBtn').addEventListener('click', () => this.start());
                 document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
                 document.getElementById('resetBtn').addEventListener('click', () => this.reset());
                 
-                // Camera controls
                 document.getElementById('topView').addEventListener('click', () => this.setTopView());
                 document.getElementById('sideView').addEventListener('click', () => this.setSideView());
                 document.getElementById('freeView').addEventListener('click', () => this.setFreeView());
-                
-                debug('UI controls initialized');
             }
             
             updateParams() {
                 const params = {
                     capacity: parseInt(document.getElementById('capacity').value),
                     food: parseInt(document.getElementById('food').value),
-                    stress: parseInt(document.getElementById('stress').value)
+                    stress: 100
                 };
                 this.environment.updateParameters(params);
             }
@@ -1075,7 +927,6 @@
             }
             
             reset() {
-                // Clear existing rats
                 this.environment.rats.forEach(rat => rat.destroy());
                 this.environment.rats = [];
                 this.environment.nextId = 1;
@@ -1084,11 +935,9 @@
                 this.environment.dailyBirths = 0;
                 this.environment.dailyDeaths = 0;
                 
-                // Reinitialize
                 this.environment.initPopulation();
                 this.updateParams();
                 this.updateDisplay();
-                
                 debug('Simulation reset');
             }
             
@@ -1105,7 +954,7 @@
                     this.checkAlerts();
                 }
                 
-                setTimeout(() => this.simulate(), 50); // 20 FPS simulation
+                setTimeout(() => this.simulate(), 50);
             }
             
             startRenderLoop() {
@@ -1119,25 +968,21 @@
             updateDisplay() {
                 const stats = this.environment.getStatistics();
                 
-                // Population stats
                 document.getElementById('totalPop').textContent = stats.totalPopulation;
                 document.getElementById('adults').textContent = stats.adults;
                 document.getElementById('juveniles').textContent = stats.juveniles;
                 document.getElementById('births').textContent = stats.birthRate;
                 document.getElementById('deaths').textContent = stats.deathRate;
                 
-                // Behavioral status
                 document.getElementById('stressLevel').textContent = stats.stressLevel;
                 document.getElementById('aggressionLevel').textContent = stats.aggressionLevel;
                 document.getElementById('reproductionLevel').textContent = stats.reproductionLevel;
                 document.getElementById('cannibalismLevel').textContent = stats.cannibalismLevel;
                 
-                // Research data
                 document.getElementById('density').textContent = stats.densityPercent + '%';
                 document.getElementById('interactions').textContent = stats.avgSocialInteractions;
                 document.getElementById('cortisol').textContent = stats.avgCorticosterone + '%';
                 
-                // Critical status indicators
                 const statusElements = {
                     stressStatus: stats.stressLevel === 'Critical',
                     aggressionStatus: stats.aggressionLevel === 'High',
@@ -1161,17 +1006,15 @@
                 let alert = null;
                 
                 if (stats.densityPercent >= 75 && stats.stressLevel === 'Critical') {
-                    alert = 'BEHAVIORAL SINK DETECTED! Population density >75% with critical stress levels. Social breakdown imminent.';
+                    alert = 'BEHAVIORAL SINK DETECTED! Population density >75% with critical stress levels.';
                 } else if (stats.avgSocialInteractions > 12) {
                     alert = 'Social interaction threshold exceeded (>12 per rat). Behavioral breakdown threshold reached.';
                 } else if (stats.avgCorticosterone > 200) {
                     alert = 'Severe chronic stress detected. Corticosterone levels indicate pathological response.';
                 } else if (stats.cannibalismLevel === 'High') {
-                    alert = 'High cannibalism risk due to overcrowding and stress. Up to 96% infanticide rate possible.';
+                    alert = 'High cannibalism risk due to overcrowding and stress.';
                 } else if (stats.reproductionLevel === 'Failing') {
                     alert = 'Reproductive failure occurring. Population declining despite adequate resources.';
-                } else if (stats.densityPercent >= 75) {
-                    alert = 'Approaching behavioral sink threshold. Monitor stress levels carefully.';
                 }
                 
                 if (alert) {
@@ -1183,38 +1026,48 @@
             }
         }
 
-        // Initialize when Three.js is loaded
+        function checkWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) throw new Error('WebGL not supported');
+                debug('WebGL support confirmed');
+                return true;
+            } catch (e) {
+                debug('WebGL Error: ' + e.message);
+                return false;
+            }
+        }
+
+        function checkThreeJS() {
+            if (typeof THREE === 'undefined') {
+                debug('Three.js failed to load from CDN');
+                return false;
+            }
+            debug('Three.js loaded successfully');
+            return true;
+        }
+
         function initializeSimulation() {
-            // Check all prerequisites
             if (!checkWebGL()) return;
             if (!checkThreeJS()) return;
             
             try {
-                console.log('🚀 All checks passed, initializing simulation...');
-                debug('Starting simulation initialization...');
-                new SimulationController();
+                debug('All checks passed, initializing simulation...');
+                setTimeout(() => {
+                    new SimulationController();
+                }, 200);
             } catch (error) {
-                console.error('❌ Simulation initialization failed:', error);
                 debug('FATAL ERROR: ' + error.message);
-                document.body.innerHTML += '<div style="color: red; padding: 20px; background: rgba(255,0,0,0.1); margin: 20px; border-radius: 8px;"><strong>❌ Simulation Failed:</strong><br>' + error.message + '<br><br>Please refresh the page or check console for details.</div>';
+                document.body.innerHTML += '<div style="color: red; padding: 20px; background: rgba(255,0,0,0.1); margin: 20px; border-radius: 8px;"><strong>❌ Simulation Failed:</strong><br>' + error.message + '</div>';
             }
         }
 
-        // Wait for DOM and attempt initialization
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeSimulation);
         } else {
-            // DOM already loaded
             setTimeout(initializeSimulation, 100);
         }
-
-        // Backup initialization if DOMContentLoaded doesn't fire
-        setTimeout(() => {
-            if (!window.simulationStarted) {
-                console.log('🔄 Backup initialization triggered...');
-                initializeSimulation();
-            }
-        }, 2000);
     </script>
 </body>
 </html>
