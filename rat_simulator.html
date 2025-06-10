@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Lab Rat Population Simulator</title>
+    <title>3D Lab Rat Population Simulator - Enhanced Genetics</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,7 +14,8 @@
             border-radius: 8px; padding: 15px; backdrop-filter: blur(5px);
         }
         .controls { top: 20px; left: 20px; width: 280px; max-height: 90vh; overflow-y: auto; }
-        .stats { top: 20px; right: 20px; width: 300px; }
+        .stats { top: 20px; right: 20px; width: 320px; max-height: 90vh; overflow-y: auto; }
+        .genetics-panel { bottom: 20px; left: 20px; width: 350px; max-height: 40vh; overflow-y: auto; }
         .header { top: 20px; left: 50%; transform: translateX(-50%); text-align: center; padding: 10px 20px; }
         
         .control-group { margin-bottom: 20px; }
@@ -36,6 +37,11 @@
         .status-item { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; text-align: center; font-size: 0.8em; }
         .status-item.critical { background: rgba(255,0,0,0.3); }
         
+        .genetics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
+        .trait-item { background: rgba(255,255,255,0.1); padding: 6px; border-radius: 4px; text-align: center; font-size: 0.75em; }
+        .trait-item.excellent { background: rgba(0,255,0,0.2); }
+        .trait-item.poor { background: rgba(255,0,0,0.2); }
+        
         .alert { background: rgba(255,0,0,0.2); border: 1px solid #f44336; border-radius: 4px; padding: 10px; margin-top: 10px; display: none; font-size: 0.85em; }
         .alert.show { display: block; }
         
@@ -48,12 +54,24 @@
             position: absolute; top: 100px; left: 20px; background: rgba(0,0,0,0.9); padding: 10px;
             border-radius: 4px; font-family: monospace; font-size: 0.8em; max-width: 400px; max-height: 200px; overflow-y: auto;
         }
+
+        .generation-info {
+            background: rgba(138, 43, 226, 0.2); border: 1px solid #8a2be2; border-radius: 4px; 
+            padding: 8px; margin-bottom: 10px; font-size: 0.85em;
+        }
+
+        .trait-bar {
+            height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 2px;
+        }
+        .trait-fill {
+            height: 100%; border-radius: 2px; transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <div class="ui-panel header">
         <h2>3D Lab Rat Population Simulator</h2>
-        <p>Based on Scientific Research</p>
+        <p>Enhanced with Genetics & Psychology</p>
     </div>
 
     <div class="ui-panel controls">
@@ -78,6 +96,10 @@
                 <label>Food Level: <span id="foodVal">100%</span></label>
                 <input type="range" min="20" max="200" value="100" class="slider" id="food">
             </div>
+            <div class="slider-row">
+                <label>Mutation Rate: <span id="mutationVal">5%</span></label>
+                <input type="range" min="0" max="20" value="5" class="slider" id="mutation">
+            </div>
         </div>
 
         <div class="control-group">
@@ -85,6 +107,7 @@
             <button class="button" id="startBtn">Start</button>
             <button class="button" id="pauseBtn">Pause</button>
             <button class="button" id="resetBtn">Reset</button>
+            <button class="button" id="selectRatBtn">Select Rat</button>
             <div class="slider-row">
                 <label>Speed: <span id="speedVal">1x</span></label>
                 <input type="range" min="1" max="10" value="3" class="slider" id="speed">
@@ -100,6 +123,11 @@
     </div>
 
     <div class="ui-panel stats">
+        <div class="generation-info">
+            <div><strong>Generation:</strong> <span id="currentGen">1</span></div>
+            <div><strong>Genetic Diversity:</strong> <span id="geneticDiversity">100%</span></div>
+        </div>
+
         <h3 style="color: #4ecdc4; margin-bottom: 10px;">Population Stats</h3>
         <div class="stat-row"><span>Total Population:</span><span class="stat-value" id="totalPop">0</span></div>
         <div class="stat-row"><span>Adults:</span><span class="stat-value" id="adults">0</span></div>
@@ -115,6 +143,16 @@
             <div class="status-item" id="cannibalismStatus"><div>Cannibalism</div><div id="cannibalismLevel">None</div></div>
         </div>
 
+        <h3 style="color: #4ecdc4; margin: 15px 0 10px 0;">Average Genetics</h3>
+        <div class="genetics-grid">
+            <div class="trait-item" id="avgAggression"><div>Aggression</div><div id="avgAggressionVal">50%</div></div>
+            <div class="trait-item" id="avgStressRes"><div>Stress Resist</div><div id="avgStressResVal">50%</div></div>
+            <div class="trait-item" id="avgSocial"><div>Sociability</div><div id="avgSocialVal">50%</div></div>
+            <div class="trait-item" id="avgIntelligence"><div>Intelligence</div><div id="avgIntelligenceVal">50%</div></div>
+            <div class="trait-item" id="avgReproduction"><div>Fertility</div><div id="avgReproductionVal">50%</div></div>
+            <div class="trait-item" id="avgCuriosity"><div>Curiosity</div><div id="avgCuriosityVal">50%</div></div>
+        </div>
+
         <h3 style="color: #4ecdc4; margin: 15px 0 10px 0;">Research Data</h3>
         <div class="stat-row"><span>Density:</span><span class="stat-value" id="density">0%</span></div>
         <div class="stat-row"><span>Avg Interactions:</span><span class="stat-value" id="interactions">0</span></div>
@@ -123,7 +161,14 @@
         <div class="alert" id="alertBox"><strong>Alert:</strong> <span id="alertMsg"></span></div>
     </div>
 
-    <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan</div>
+    <div class="ui-panel genetics-panel">
+        <h3 style="color: #9370db; margin-bottom: 10px;">Selected Rat Genetics</h3>
+        <div id="selectedRatInfo">
+            <p style="color: #888; font-style: italic;">Click "Select Rat" then click on a rat to view detailed genetics</p>
+        </div>
+    </div>
+
+    <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan • Click rat when in select mode</div>
     <div id="debug"></div>
 
     <script>
@@ -138,13 +183,118 @@
             }
         }
 
+        // Genetics and Psychology System
+        class GeneticProfile {
+            constructor(parent1 = null, parent2 = null, mutationRate = 0.05) {
+                if (parent1 && parent2) {
+                    // Inherit from parents with crossover and mutation
+                    this.traits = this.inherit(parent1.genetics.traits, parent2.genetics.traits, mutationRate);
+                } else {
+                    // Random initial genetics
+                    this.traits = {
+                        // Physical traits (0-1 scale)
+                        aggressiveness: Math.random(),
+                        stressResilience: Math.random(),
+                        metabolism: Math.random(),
+                        immuneSystem: Math.random(),
+                        lifespan: Math.random(),
+                        
+                        // Psychological traits (0-1 scale)
+                        sociability: Math.random(),
+                        curiosity: Math.random(),
+                        intelligence: Math.random(),
+                        fearfulness: Math.random(),
+                        reproductiveSuccess: Math.random(),
+                        
+                        // Behavioral traits (0-1 scale)
+                        territoriality: Math.random(),
+                        parentalCare: Math.random(),
+                        forageEfficiency: Math.random(),
+                        riskTaking: Math.random(),
+                        learningRate: Math.random()
+                    };
+                }
+                
+                this.generation = parent1 ? Math.max(parent1.genetics.generation, parent2.genetics.generation) + 1 : 1;
+                this.lineage = this.createLineage(parent1, parent2);
+            }
+            
+            inherit(traits1, traits2, mutationRate) {
+                const newTraits = {};
+                
+                for (let trait in traits1) {
+                    // Crossover: randomly pick from either parent
+                    let value = Math.random() < 0.5 ? traits1[trait] : traits2[trait];
+                    
+                    // Add some blending (average of parents with some weight)
+                    if (Math.random() < 0.3) {
+                        value = (traits1[trait] + traits2[trait]) / 2;
+                    }
+                    
+                    // Mutation
+                    if (Math.random() < mutationRate) {
+                        value += (Math.random() - 0.5) * 0.2; // ±10% mutation
+                        value = Math.max(0, Math.min(1, value)); // Clamp to 0-1
+                    }
+                    
+                    newTraits[trait] = value;
+                }
+                
+                return newTraits;
+            }
+            
+            createLineage(parent1, parent2) {
+                if (!parent1 || !parent2) return 'Founder';
+                return `Gen${this.generation}`;
+            }
+            
+            // Calculate fitness score for natural selection
+            getFitness(environment) {
+                let fitness = 0.5; // Base fitness
+                
+                // Environmental adaptations
+                if (environment.environmentType === 'universe25') {
+                    fitness += this.traits.stressResilience * 0.3;
+                    fitness -= this.traits.aggressiveness * 0.2; // Aggression is bad in overcrowded spaces
+                } else if (environment.environmentType === 'forest') {
+                    fitness += this.traits.curiosity * 0.2;
+                    fitness += this.traits.forageEfficiency * 0.25;
+                } else if (environment.environmentType === 'urban') {
+                    fitness += this.traits.intelligence * 0.25;
+                    fitness += this.traits.riskTaking * 0.15;
+                }
+                
+                // General beneficial traits
+                fitness += this.traits.immuneSystem * 0.2;
+                fitness += this.traits.reproductiveSuccess * 0.15;
+                fitness += this.traits.parentalCare * 0.1;
+                
+                return Math.max(0.1, Math.min(1.0, fitness));
+            }
+            
+            // Get psychological state modifiers
+            getPsychologicalModifiers() {
+                return {
+                    stressMultiplier: 1 - (this.traits.stressResilience * 0.5),
+                    socialNeed: this.traits.sociability,
+                    explorationDrive: this.traits.curiosity,
+                    learningSpeed: this.traits.learningRate,
+                    fearResponse: this.traits.fearfulness,
+                    aggressionTendency: this.traits.aggressiveness
+                };
+            }
+        }
+
         class Rat3D {
-            constructor(x, y, z, id, scene) {
+            constructor(x, y, z, id, scene, parent1 = null, parent2 = null, mutationRate = 0.05) {
                 this.id = id;
                 this.scene = scene;
                 this.position = new THREE.Vector3(x, y, z);
                 this.velocity = new THREE.Vector3();
                 this.target = new THREE.Vector3(x, y, z);
+                
+                // Initialize genetics first
+                this.genetics = new GeneticProfile(parent1, parent2, mutationRate);
                 
                 this.age = Math.random() * 100;
                 this.energy = 80 + Math.random() * 20;
@@ -153,7 +303,7 @@
                 this.corticosterone = 100;
                 
                 this.sex = Math.random() < 0.5 ? 'male' : 'female';
-                this.dominance = Math.random();
+                this.dominance = Math.random() * 0.5 + (this.genetics.traits.aggressiveness * 0.5);
                 this.reproductiveAge = this.sex === 'female' ? 45 : 40;
                 this.estrusDay = Math.random() * 5;
                 this.gestationDays = 0;
@@ -161,10 +311,17 @@
                 this.state = 'foraging';
                 this.socialInteractions = 0;
                 this.territoryCenter = this.position.clone();
-                this.territoryRadius = 2;
+                this.territoryRadius = 2 + (this.genetics.traits.territoriality * 2);
                 
                 this.lastStateChange = 0;
                 this.lastTargetChange = 0;
+                this.selected = false;
+                
+                // Psychological state variables
+                this.memory = new Map(); // For learning and remembering locations
+                this.socialBonds = new Map(); // Track relationships with other rats
+                this.explorationHistory = new Set(); // Areas explored
+                this.currentMood = 'neutral'; // neutral, happy, stressed, aggressive, fearful
                 
                 this.createModel();
             }
@@ -204,8 +361,10 @@
                 this.group.add(tail);
                 
                 this.group.position.copy(this.position);
+                this.group.userData = { isRat: true, ratInstance: this };
                 this.scene.add(this.group);
                 
+                // Stress indicator
                 const stressGeo = new THREE.RingGeometry(0.15, 0.18, 8);
                 const stressMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0 });
                 this.stressRing = new THREE.Mesh(stressGeo, stressMat);
@@ -213,6 +372,15 @@
                 this.stressRing.position.y = 0.01;
                 this.group.add(this.stressRing);
                 
+                // Selection indicator
+                const selectGeo = new THREE.RingGeometry(0.2, 0.25, 12);
+                const selectMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0 });
+                this.selectRing = new THREE.Mesh(selectGeo, selectMat);
+                this.selectRing.rotation.x = -Math.PI / 2;
+                this.selectRing.position.y = 0.02;
+                this.group.add(this.selectRing);
+                
+                // Genetic quality indicator (crown for high fitness)
                 const crownGeo = new THREE.ConeGeometry(0.02, 0.04, 4);
                 const crownMat = new THREE.MeshLambertMaterial({ color: 0x2196f3 });
                 this.crown = new THREE.Mesh(crownGeo, crownMat);
@@ -222,44 +390,67 @@
             }
             
             getColor() {
-                if (this.age < 21) return 0xffeb3b;
-                if (this.stress > 70) return 0x8b0000;
+                // Color based on genetics and state
+                const traits = this.genetics.traits;
+                
+                if (this.selected) return 0x00ff00;
+                if (this.age < 21) return 0xffeb3b; // Yellow for juveniles
+                
+                // Color based on psychological state and genetics
+                if (this.currentMood === 'aggressive' || traits.aggressiveness > 0.8) return 0x8b0000;
+                if (this.currentMood === 'fearful' || traits.fearfulness > 0.8) return 0x4169e1;
                 if (this.state === 'mating') return 0xdc143c;
-                if (this.dominance > 0.8) return 0x4169e1;
                 if (this.sex === 'female' && this.gestationDays > 0) return 0x9370db;
-                return 0x8b4513;
+                if (traits.intelligence > 0.8) return 0x228b22; // Green for intelligent
+                if (traits.stressResilience > 0.8) return 0xff8c00; // Orange for resilient
+                
+                return 0x8b4513; // Default brown
             }
             
             update(deltaTime, environment) {
                 this.age += deltaTime;
                 this.updatePhysiology(deltaTime, environment);
+                this.updatePsychology(deltaTime, environment);
                 this.updateBehavior(deltaTime, environment);
                 this.updateMovement(deltaTime);
                 this.updateVisuals();
             }
             
             updatePhysiology(deltaTime, environment) {
-                let consumption = 0.15;
-                if (this.state === 'foraging') consumption = 0.3;
-                if (this.state === 'fleeing') consumption = 1.2;
-                if (this.state === 'mating') consumption = 0.6;
+                const traits = this.genetics.traits;
+                const psychMods = this.genetics.getPsychologicalModifiers();
+                
+                // Metabolism affected by genetics
+                let consumption = 0.15 * (1 + traits.metabolism * 0.5);
+                if (this.state === 'foraging') consumption *= (1 + traits.forageEfficiency);
+                if (this.state === 'fleeing') consumption *= 2.0;
+                if (this.state === 'mating') consumption *= 1.5;
                 
                 this.energy -= consumption * deltaTime;
                 this.energy = Math.max(0, Math.min(100, this.energy));
                 
+                // Stress calculation with genetic modifiers
                 let densityStress = Math.max(0, (environment.getPopulationDensity() - 0.75) * 150);
-                let socialStress = Math.max(0, (this.socialInteractions - 12) * 8);
-                this.stress = Math.min(100, densityStress + socialStress + (environment.generalStress || 0));
+                let socialStress = Math.max(0, (this.socialInteractions - (12 * traits.sociability)) * 8);
                 
+                // Apply genetic stress resistance
+                densityStress *= psychMods.stressMultiplier;
+                socialStress *= psychMods.stressMultiplier;
+                
+                this.stress = Math.min(100, densityStress + socialStress + (environment.generalStress || 0));
                 this.corticosterone = 100 + (this.stress * 1.3);
                 
-                if (this.stress > 70) this.health -= 0.15 * deltaTime;
+                // Health effects with genetic modifiers
+                if (this.stress > 70) {
+                    this.health -= 0.15 * deltaTime * (1 - traits.stressResilience * 0.5);
+                }
                 if (this.state === 'resting' && this.energy > 60) {
-                    this.health += 0.08 * deltaTime;
-                    this.stress = Math.max(0, this.stress - 0.3 * deltaTime);
+                    this.health += 0.08 * deltaTime * (1 + traits.immuneSystem * 0.3);
+                    this.stress = Math.max(0, this.stress - 0.3 * deltaTime * traits.stressResilience);
                 }
                 this.health = Math.max(0, Math.min(100, this.health));
                 
+                // Reproductive cycle with genetic influences
                 if (this.sex === 'female' && this.age > this.reproductiveAge) {
                     this.estrusDay += deltaTime;
                     if (this.estrusDay > 5) this.estrusDay = 0;
@@ -273,22 +464,98 @@
                 }
             }
             
+            updatePsychology(deltaTime, environment) {
+                const traits = this.genetics.traits;
+                
+                // Update mood based on conditions and genetics
+                let moodScore = 0;
+                
+                // Environmental factors
+                if (this.energy > 70) moodScore += 0.2;
+                if (this.energy < 30) moodScore -= 0.3;
+                if (this.health > 80) moodScore += 0.1;
+                if (this.health < 40) moodScore -= 0.2;
+                if (this.stress > 60) moodScore -= 0.4;
+                
+                // Social factors with genetic influence
+                let idealSocial = traits.sociability * 10;
+                if (Math.abs(this.socialInteractions - idealSocial) < 2) {
+                    moodScore += 0.1; // Happy with social level
+                } else if (this.socialInteractions > idealSocial + 4) {
+                    moodScore -= 0.2 * (1 - traits.sociability); // Overstimulated
+                }
+                
+                // Update current mood
+                if (moodScore > 0.2) this.currentMood = 'happy';
+                else if (moodScore < -0.3) this.currentMood = 'stressed';
+                else if (this.stress > 80) this.currentMood = 'fearful';
+                else if (traits.aggressiveness > 0.7 && this.socialInteractions > idealSocial) this.currentMood = 'aggressive';
+                else this.currentMood = 'neutral';
+                
+                // Learning and memory updates
+                if (traits.intelligence > 0.6) {
+                    this.updateMemory(environment);
+                }
+                
+                // Curiosity-driven exploration
+                if (traits.curiosity > 0.7 && Math.random() < 0.01) {
+                    this.exploreNewArea();
+                }
+            }
+            
+            updateMemory(environment) {
+                // Remember good food spots, safe areas, etc.
+                const locationKey = `${Math.floor(this.position.x)},${Math.floor(this.position.z)}`;
+                
+                if (!this.memory.has(locationKey)) {
+                    this.memory.set(locationKey, {
+                        safetyLevel: this.stress < 30 ? 1 : 0,
+                        foodQuality: this.energy > 60 ? 1 : 0,
+                        visitCount: 1,
+                        lastVisit: environment.dayCounter
+                    });
+                } else {
+                    const mem = this.memory.get(locationKey);
+                    mem.visitCount++;
+                    mem.lastVisit = environment.dayCounter;
+                    if (this.stress < 30) mem.safetyLevel = Math.min(1, mem.safetyLevel + 0.1);
+                    if (this.energy > 60) mem.foodQuality = Math.min(1, mem.foodQuality + 0.1);
+                }
+            }
+            
+            exploreNewArea() {
+                // Curious rats explore further from their territory
+                const exploreRadius = this.territoryRadius * (1 + this.genetics.traits.curiosity);
+                this.target.copy(this.territoryCenter);
+                this.target.x += (Math.random() - 0.5) * exploreRadius * 3;
+                this.target.z += (Math.random() - 0.5) * exploreRadius * 3;
+            }
+            
             updateBehavior(deltaTime, environment) {
+                const traits = this.genetics.traits;
                 this.lastStateChange += deltaTime;
                 
                 if (this.lastStateChange > 0.8) {
                     let prob = Math.random();
                     
+                    // Basic needs override psychology
                     if (this.energy < 25) {
                         this.state = 'foraging';
-                    } else if (this.stress > 75) {
+                    } else if (this.stress > 75 || this.currentMood === 'fearful') {
                         this.state = 'fleeing';
                     } else if (this.health < 35) {
                         this.state = 'resting';
-                    } else if (this.canMate(environment) && prob < 0.25) {
+                    } else if (this.canMate(environment) && prob < (0.25 * traits.reproductiveSuccess)) {
                         this.state = 'mating';
                     } else {
-                        if (this.state === 'resting' && prob < 0.15) {
+                        // Genetic-influenced behavioral choices
+                        if (this.currentMood === 'aggressive' && prob < traits.aggressiveness * 0.3) {
+                            this.state = 'territorial';
+                        } else if (traits.curiosity > 0.6 && prob < 0.15) {
+                            this.state = 'exploring';
+                        } else if (traits.sociability > 0.7 && prob < 0.2) {
+                            this.state = 'socializing';
+                        } else if (this.state === 'resting' && prob < 0.15) {
                             this.state = 'foraging';
                         } else if (this.state === 'foraging' && prob < 0.08) {
                             this.state = 'resting';
@@ -297,31 +564,40 @@
                     this.lastStateChange = 0;
                 }
                 
+                // Social interaction decay
                 if (Math.random() < 0.015) {
-                    this.socialInteractions = 0;
+                    this.socialInteractions = Math.max(0, this.socialInteractions - 1);
                 }
             }
             
             canMate(environment) {
+                const traits = this.genetics.traits;
+                
                 if (this.age < this.reproductiveAge) return false;
                 if (this.sex === 'female') {
                     if (this.estrusDay < 1 || this.estrusDay > 2.5) return false;
                     if (this.gestationDays > 0) return false;
                 }
-                if (this.stress > 55) return false;
+                if (this.stress > (55 + traits.stressResilience * 20)) return false;
                 if (this.energy < 35) return false;
+                if (this.currentMood === 'fearful') return false;
+                
                 return true;
             }
             
             giveBirth(environment) {
-                let baseLitter = 8 + Math.random() * 4;
+                const traits = this.genetics.traits;
+                
+                // Genetic influence on litter size
+                let baseLitter = 6 + (traits.reproductiveSuccess * 6);
                 let stressReduction = (this.stress / 100) * 0.5;
                 let densityReduction = Math.max(0, (environment.getPopulationDensity() - 0.8) * 0.6);
                 let litterSize = Math.max(1, Math.floor(baseLitter * (1 - stressReduction - densityReduction)));
                 
-                let survivalRate = 0.75;
-                if (environment.getPopulationDensity() > 0.9) survivalRate = 0.35;
-                if (this.stress > 50) survivalRate *= 0.7;
+                // Survival rate influenced by parental care and environment
+                let survivalRate = 0.5 + (traits.parentalCare * 0.4);
+                if (environment.getPopulationDensity() > 0.9) survivalRate *= 0.4;
+                if (this.stress > 50) survivalRate *= 0.6;
                 
                 let survivors = 0;
                 for (let i = 0; i < litterSize; i++) {
@@ -330,7 +606,18 @@
                         let newPos = this.position.clone();
                         newPos.x += (Math.random() - 0.5) * 0.4;
                         newPos.z += (Math.random() - 0.5) * 0.4;
-                        environment.addRat(new Rat3D(newPos.x, newPos.y, newPos.z, environment.nextId++, environment.scene));
+                        
+                        // Create offspring with genetics from both parents
+                        let father = this.findMate(environment);
+                        let offspring = new Rat3D(
+                            newPos.x, newPos.y, newPos.z, 
+                            environment.nextId++, 
+                            environment.scene, 
+                            this, 
+                            father, 
+                            environment.mutationRate
+                        );
+                        environment.addRat(offspring);
                     }
                 }
                 
@@ -341,23 +628,42 @@
                 this.health -= 8;
             }
             
+            findMate(environment) {
+                // Find a suitable father (for genetic inheritance)
+                let possibleMates = environment.rats.filter(r => 
+                    r.sex === 'male' && 
+                    r.age > r.reproductiveAge && 
+                    r.position.distanceTo(this.position) < 2.0
+                );
+                
+                if (possibleMates.length === 0) {
+                    // If no nearby males, use any adult male for genetics
+                    possibleMates = environment.rats.filter(r => 
+                        r.sex === 'male' && r.age > r.reproductiveAge
+                    );
+                }
+                
+                if (possibleMates.length > 0) {
+                    // Prefer high-fitness males
+                    possibleMates.sort((a, b) => b.genetics.getFitness(environment) - a.genetics.getFitness(environment));
+                    return possibleMates[0];
+                }
+                
+                return this; // Fallback (shouldn't happen)
+            }
+            
             updateMovement(deltaTime) {
+                const traits = this.genetics.traits;
                 this.lastTargetChange += deltaTime;
                 
-                if (this.lastTargetChange > 1 + Math.random() * 2) {
-                    if (this.state === 'fleeing') {
-                        let fleeDir = this.position.clone().normalize();
-                        if (fleeDir.length() === 0) fleeDir.set(Math.random() - 0.5, 0, Math.random() - 0.5);
-                        this.target.copy(this.position).add(fleeDir.multiplyScalar(1.5));
-                    } else {
-                        this.target.copy(this.territoryCenter);
-                        this.target.x += (Math.random() - 0.5) * this.territoryRadius * 2;
-                        this.target.z += (Math.random() - 0.5) * this.territoryRadius * 2;
-                    }
-                    
-                    this.target.x = Math.max(-4, Math.min(4, this.target.x));
-                    this.target.z = Math.max(-4, Math.min(4, this.target.z));
-                    this.target.y = 0.08;
+                let targetChangeInterval = 1 + Math.random() * 2;
+                
+                // Genetic influence on movement patterns
+                if (traits.curiosity > 0.7) targetChangeInterval *= 0.7; // More frequent target changes
+                if (traits.fearfulness > 0.7) targetChangeInterval *= 1.3; // Less frequent movement
+                
+                if (this.lastTargetChange > targetChangeInterval) {
+                    this.chooseNewTarget(traits, this.scene.environment);
                     this.lastTargetChange = 0;
                 }
                 
@@ -366,11 +672,7 @@
                 
                 if (distance > 0.05) {
                     direction.normalize();
-                    let speed = 0.5;
-                    if (this.state === 'foraging') speed = 0.8;
-                    if (this.state === 'fleeing') speed = 1.5;
-                    if (this.state === 'resting') speed = 0.2;
-                    
+                    let speed = this.calculateSpeed(traits);
                     this.velocity.copy(direction).multiplyScalar(speed);
                 } else {
                     this.velocity.multiplyScalar(0.7);
@@ -385,11 +687,113 @@
                 }
             }
             
+            chooseNewTarget(traits, environment) {
+                switch (this.state) {
+                    case 'fleeing':
+                        let fleeDir = this.position.clone().normalize();
+                        if (fleeDir.length() === 0) fleeDir.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+                        this.target.copy(this.position).add(fleeDir.multiplyScalar(2.0));
+                        break;
+                        
+                    case 'exploring':
+                        let exploreRadius = this.territoryRadius * (1 + traits.curiosity * 2);
+                        this.target.copy(this.territoryCenter);
+                        this.target.x += (Math.random() - 0.5) * exploreRadius * 2;
+                        this.target.z += (Math.random() - 0.5) * exploreRadius * 2;
+                        break;
+                        
+                    case 'territorial':
+                        // Patrol territory boundaries
+                        let patrolAngle = Math.random() * Math.PI * 2;
+                        let patrolRadius = this.territoryRadius * 0.8;
+                        this.target.copy(this.territoryCenter);
+                        this.target.x += Math.cos(patrolAngle) * patrolRadius;
+                        this.target.z += Math.sin(patrolAngle) * patrolRadius;
+                        break;
+                        
+                    case 'socializing':
+                        // Move towards other rats
+                        this.moveTowardsOthers();
+                        break;
+                        
+                    default:
+                        // Normal territory movement
+                        this.target.copy(this.territoryCenter);
+                        this.target.x += (Math.random() - 0.5) * this.territoryRadius * 2;
+                        this.target.z += (Math.random() - 0.5) * this.territoryRadius * 2;
+                }
+                
+                // Clamp to environment bounds - make sure bounds are reasonable
+                let boundSize = 4;
+                if (environment && environment.environmentType) {
+                    if (environment.environmentType === 'forest') boundSize = 6;
+                    if (environment.environmentType === 'barn') boundSize = 8;
+                    if (environment.environmentType === 'universe25') boundSize = 1.8;
+                }
+                
+                this.target.x = Math.max(-boundSize, Math.min(boundSize, this.target.x));
+                this.target.z = Math.max(-boundSize, Math.min(boundSize, this.target.z));
+                this.target.y = 0.08;
+            }
+            
+            moveTowardsOthers() {
+                // Find nearby rats for socializing
+                let nearbyRats = this.scene.children.filter(child => 
+                    child.userData && child.userData.isRat && 
+                    child.position.distanceTo(this.position) < 3 && 
+                    child.position.distanceTo(this.position) > 0.1
+                );
+                
+                if (nearbyRats.length > 0) {
+                    // Move towards closest rat
+                    let closest = nearbyRats[0];
+                    let closestDist = closest.position.distanceTo(this.position);
+                    
+                    for (let rat of nearbyRats) {
+                        let dist = rat.position.distanceTo(this.position);
+                        if (dist < closestDist) {
+                            closest = rat;
+                            closestDist = dist;
+                        }
+                    }
+                    
+                    this.target.copy(closest.position);
+                    this.target.y = 0.08;
+                } else {
+                    // No rats nearby, move randomly in territory
+                    this.target.copy(this.territoryCenter);
+                    this.target.x += (Math.random() - 0.5) * this.territoryRadius;
+                    this.target.z += (Math.random() - 0.5) * this.territoryRadius;
+                }
+            }
+            
+            calculateSpeed(traits) {
+                let baseSpeed = 0.5;
+                
+                switch (this.state) {
+                    case 'foraging':
+                        return baseSpeed * 0.8 * (1 + traits.forageEfficiency * 0.5);
+                    case 'fleeing':
+                        return baseSpeed * 2.0 * (1 + traits.metabolism * 0.3);
+                    case 'exploring':
+                        return baseSpeed * 1.2 * (1 + traits.curiosity * 0.4);
+                    case 'territorial':
+                        return baseSpeed * 1.1 * (1 + traits.aggressiveness * 0.3);
+                    case 'socializing':
+                        return baseSpeed * 0.7;
+                    case 'resting':
+                        return baseSpeed * 0.2;
+                    default:
+                        return baseSpeed;
+                }
+            }
+            
             updateVisuals() {
                 let newColor = this.getColor();
                 this.bodyMesh.material.color.setHex(newColor);
                 this.headMesh.material.color.setHex(newColor);
                 
+                // Stress indicator
                 if (this.stress > 40) {
                     this.stressRing.material.opacity = (this.stress - 40) / 60 * 0.6;
                     this.stressRing.visible = true;
@@ -397,22 +801,51 @@
                     this.stressRing.visible = false;
                 }
                 
-                this.crown.visible = this.dominance > 0.8;
+                // Selection indicator
+                this.selectRing.material.opacity = this.selected ? 0.8 : 0;
+                this.selectRing.visible = this.selected;
+                
+                // Genetic fitness indicator
+                let fitness = this.genetics.getFitness({ environmentType: 'lab', getPopulationDensity: () => 0.5 });
+                this.crown.visible = fitness > 0.8;
             }
             
             shouldDie(environment) {
+                const traits = this.genetics.traits;
+                
                 let baseDeath = 0.0001;
-                let ageDeath = this.age > 600 ? (this.age - 600) / 300 * 0.003 : 0;
-                let stressDeath = this.stress > 75 ? 0.001 : 0;
-                let healthDeath = this.health < 25 ? 0.002 : 0;
+                
+                // Age-related death with genetic lifespan influence
+                let maxAge = 600 + (traits.lifespan * 300);
+                let ageDeath = this.age > maxAge ? (this.age - maxAge) / 200 * 0.005 : 0;
+                
+                // Health-related deaths with genetic resistance
+                let stressDeath = this.stress > 75 ? 0.001 * (1 - traits.stressResilience * 0.5) : 0;
+                let healthDeath = this.health < 25 ? 0.002 * (1 - traits.immuneSystem * 0.4) : 0;
                 let energyDeath = this.energy < 10 ? 0.004 : 0;
+                
+                // Environmental deaths
                 let densityDeath = environment.getPopulationDensity() > 0.85 ? 0.0008 : 0;
                 
-                return Math.random() < (baseDeath + ageDeath + stressDeath + healthDeath + energyDeath + densityDeath);
+                // Natural selection pressure - less fit rats more likely to die
+                let fitness = this.genetics.getFitness(environment);
+                let selectionPressure = (1 - fitness) * 0.0005;
+                
+                let totalDeathChance = baseDeath + ageDeath + stressDeath + healthDeath + energyDeath + densityDeath + selectionPressure;
+                
+                return Math.random() < totalDeathChance;
             }
             
             destroy() {
                 this.scene.remove(this.group);
+            }
+            
+            select() {
+                this.selected = true;
+            }
+            
+            deselect() {
+                this.selected = false;
             }
         }
 
@@ -421,6 +854,7 @@
                 this.rats = [];
                 this.nextId = 1;
                 this.environmentType = 'lab';
+                this.mutationRate = 0.05;
                 
                 this.carryingCapacity = 100;
                 this.foodAvailability = 1.0;
@@ -431,15 +865,20 @@
                 this.dailyBirths = 0;
                 this.dailyDeaths = 0;
                 this.dayCounter = 0;
+                this.currentGeneration = 1;
+                
+                this.selectedRat = null;
+                this.isSelecting = false;
                 
                 this.initScene();
                 this.createEnvironment();
                 this.initPopulation();
-                debug('Environment initialized');
+                debug('Environment initialized with genetics system');
             }
             
             initScene() {
                 this.scene = new THREE.Scene();
+                this.scene.environment = this; // Add reference for rats to access environment
                 this.scene.background = new THREE.Color(0xf0f0f0);
                 
                 this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -472,6 +911,10 @@
                 let cameraAngleX = 0.7;
                 let cameraAngleY = 0.4;
                 
+                // Raycaster for rat selection
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                
                 this.renderer.domElement.addEventListener('mousedown', (e) => {
                     mouseDown = true;
                     mouseX = e.clientX;
@@ -480,8 +923,14 @@
                 
                 document.addEventListener('mouseup', () => mouseDown = false);
                 
+                this.renderer.domElement.addEventListener('click', (e) => {
+                    if (this.isSelecting) {
+                        this.handleRatSelection(e);
+                    }
+                });
+                
                 document.addEventListener('mousemove', (e) => {
-                    if (!mouseDown) return;
+                    if (!mouseDown || this.isSelecting) return;
                     
                     let deltaX = e.clientX - mouseX;
                     let deltaY = e.clientY - mouseY;
@@ -510,7 +959,117 @@
                 };
             }
             
+            handleRatSelection(event) {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                
+                let ratMeshes = [];
+                this.rats.forEach(rat => {
+                    if (rat.group && rat.bodyMesh) {
+                        ratMeshes.push({ mesh: rat.bodyMesh, rat: rat });
+                    }
+                });
+                
+                const intersects = this.raycaster.intersectObjects(ratMeshes.map(r => r.mesh));
+                
+                if (intersects.length > 0) {
+                    // Find which rat was clicked
+                    let clickedRat = null;
+                    for (let ratData of ratMeshes) {
+                        if (ratData.mesh === intersects[0].object) {
+                            clickedRat = ratData.rat;
+                            break;
+                        }
+                    }
+                    
+                    if (clickedRat) {
+                        this.selectRat(clickedRat);
+                        this.isSelecting = false;
+                        document.getElementById('selectRatBtn').textContent = 'Select Rat';
+                    }
+                }
+            }
+            
+            selectRat(rat) {
+                // Deselect previous rat
+                if (this.selectedRat) {
+                    this.selectedRat.deselect();
+                }
+                
+                // Select new rat
+                this.selectedRat = rat;
+                rat.select();
+                this.updateSelectedRatDisplay();
+            }
+            
+            updateSelectedRatDisplay() {
+                const infoDiv = document.getElementById('selectedRatInfo');
+                
+                if (!this.selectedRat) {
+                    infoDiv.innerHTML = '<p style="color: #888; font-style: italic;">Click "Select Rat" then click on a rat to view detailed genetics</p>';
+                    return;
+                }
+                
+                const rat = this.selectedRat;
+                const traits = rat.genetics.traits;
+                
+                const formatTrait = (value) => Math.round(value * 100);
+                const getTraitColor = (value) => {
+                    if (value > 0.75) return '#4caf50';
+                    if (value > 0.5) return '#ff9800';
+                    if (value > 0.25) return '#f44336';
+                    return '#9e9e9e';
+                };
+                
+                infoDiv.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>Rat #${rat.id}</strong> (${rat.sex}, Age: ${Math.round(rat.age)})
+                        <br><strong>Generation:</strong> ${rat.genetics.generation}
+                        <br><strong>Lineage:</strong> ${rat.genetics.lineage}
+                        <br><strong>Fitness:</strong> ${Math.round(rat.genetics.getFitness(this) * 100)}%
+                    </div>
+                    
+                    <h4 style="color: #ff6b6b; margin: 10px 0 5px 0;">Physical Traits</h4>
+                    <div style="font-size: 0.8em;">
+                        <div>Aggressiveness: <span style="color: ${getTraitColor(traits.aggressiveness)}">${formatTrait(traits.aggressiveness)}%</span></div>
+                        <div>Stress Resilience: <span style="color: ${getTraitColor(traits.stressResilience)}">${formatTrait(traits.stressResilience)}%</span></div>
+                        <div>Metabolism: <span style="color: ${getTraitColor(traits.metabolism)}">${formatTrait(traits.metabolism)}%</span></div>
+                        <div>Immune System: <span style="color: ${getTraitColor(traits.immuneSystem)}">${formatTrait(traits.immuneSystem)}%</span></div>
+                        <div>Lifespan: <span style="color: ${getTraitColor(traits.lifespan)}">${formatTrait(traits.lifespan)}%</span></div>
+                    </div>
+                    
+                    <h4 style="color: #4ecdc4; margin: 10px 0 5px 0;">Psychological Traits</h4>
+                    <div style="font-size: 0.8em;">
+                        <div>Sociability: <span style="color: ${getTraitColor(traits.sociability)}">${formatTrait(traits.sociability)}%</span></div>
+                        <div>Curiosity: <span style="color: ${getTraitColor(traits.curiosity)}">${formatTrait(traits.curiosity)}%</span></div>
+                        <div>Intelligence: <span style="color: ${getTraitColor(traits.intelligence)}">${formatTrait(traits.intelligence)}%</span></div>
+                        <div>Fearfulness: <span style="color: ${getTraitColor(traits.fearfulness)}">${formatTrait(traits.fearfulness)}%</span></div>
+                        <div>Reproductive Success: <span style="color: ${getTraitColor(traits.reproductiveSuccess)}">${formatTrait(traits.reproductiveSuccess)}%</span></div>
+                    </div>
+                    
+                    <h4 style="color: #9370db; margin: 10px 0 5px 0;">Behavioral Traits</h4>
+                    <div style="font-size: 0.8em;">
+                        <div>Territoriality: <span style="color: ${getTraitColor(traits.territoriality)}">${formatTrait(traits.territoriality)}%</span></div>
+                        <div>Parental Care: <span style="color: ${getTraitColor(traits.parentalCare)}">${formatTrait(traits.parentalCare)}%</span></div>
+                        <div>Forage Efficiency: <span style="color: ${getTraitColor(traits.forageEfficiency)}">${formatTrait(traits.forageEfficiency)}%</span></div>
+                        <div>Risk Taking: <span style="color: ${getTraitColor(traits.riskTaking)}">${formatTrait(traits.riskTaking)}%</span></div>
+                        <div>Learning Rate: <span style="color: ${getTraitColor(traits.learningRate)}">${formatTrait(traits.learningRate)}%</span></div>
+                    </div>
+                    
+                    <div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.8em;">
+                        <strong>Current State:</strong> ${rat.state}<br>
+                        <strong>Mood:</strong> ${rat.currentMood}<br>
+                        <strong>Energy:</strong> ${Math.round(rat.energy)}%<br>
+                        <strong>Stress:</strong> ${Math.round(rat.stress)}%<br>
+                        <strong>Health:</strong> ${Math.round(rat.health)}%
+                    </div>
+                `;
+            }
+            
             createEnvironment() {
+                // [Same environment creation code as before]
                 const objectsToRemove = [];
                 this.scene.traverse((child) => {
                     if (child.userData && child.userData.isEnvironment) {
@@ -531,6 +1090,7 @@
                 debug(`Environment created: ${this.environmentType}`);
             }
             
+            // [Include all the createXEnvironment methods from the original code]
             createLabEnvironment() {
                 this.scene.background = new THREE.Color(0xf0f0f0);
                 
@@ -697,30 +1257,102 @@
             }
             
             initPopulation() {
+                // Create founder population with diverse genetics
                 for (let i = 0; i < 6; i++) {
                     let x = (Math.random() - 0.5) * 3;
                     let z = (Math.random() - 0.5) * 3;
                     this.addRat(new Rat3D(x, 0.08, z, this.nextId++, this.scene));
                 }
-                debug(`Initial population: ${this.rats.length} rats`);
+                debug(`Initial population: ${this.rats.length} rats (Generation 1)`);
             }
             
             addRat(rat) {
                 this.rats.push(rat);
+                // Update current generation based on highest generation in population
+                this.currentGeneration = Math.max(this.currentGeneration, rat.genetics.generation);
             }
             
             getPopulationDensity() {
                 return this.rats.length / this.carryingCapacity;
             }
             
+            calculateGeneticDiversity() {
+                if (this.rats.length < 2) return 100;
+                
+                let totalDifference = 0;
+                let comparisons = 0;
+                
+                // Sample genetic diversity by comparing traits
+                for (let i = 0; i < this.rats.length && i < 10; i++) {
+                    for (let j = i + 1; j < this.rats.length && j < 10; j++) {
+                        let rat1 = this.rats[i];
+                        let rat2 = this.rats[j];
+                        let difference = 0;
+                        let traitCount = 0;
+                        
+                        for (let trait in rat1.genetics.traits) {
+                            difference += Math.abs(rat1.genetics.traits[trait] - rat2.genetics.traits[trait]);
+                            traitCount++;
+                        }
+                        
+                        totalDifference += (difference / traitCount);
+                        comparisons++;
+                    }
+                }
+                
+                if (comparisons === 0) return 100;
+                
+                // Convert to percentage (higher means more diverse)
+                let avgDifference = totalDifference / comparisons;
+                return Math.round(avgDifference * 200); // Scale to reasonable percentage
+            }
+            
+            getAverageTraits() {
+                if (this.rats.length === 0) {
+                    return {
+                        aggressiveness: 0.5, stressResilience: 0.5, sociability: 0.5,
+                        intelligence: 0.5, reproductiveSuccess: 0.5, curiosity: 0.5
+                    };
+                }
+                
+                let sums = {
+                    aggressiveness: 0, stressResilience: 0, sociability: 0,
+                    intelligence: 0, reproductiveSuccess: 0, curiosity: 0
+                };
+                
+                this.rats.forEach(rat => {
+                    sums.aggressiveness += rat.genetics.traits.aggressiveness;
+                    sums.stressResilience += rat.genetics.traits.stressResilience;
+                    sums.sociability += rat.genetics.traits.sociability;
+                    sums.intelligence += rat.genetics.traits.intelligence;
+                    sums.reproductiveSuccess += rat.genetics.traits.reproductiveSuccess;
+                    sums.curiosity += rat.genetics.traits.curiosity;
+                });
+                
+                let count = this.rats.length;
+                return {
+                    aggressiveness: sums.aggressiveness / count,
+                    stressResilience: sums.stressResilience / count,
+                    sociability: sums.sociability / count,
+                    intelligence: sums.intelligence / count,
+                    reproductiveSuccess: sums.reproductiveSuccess / count,
+                    curiosity: sums.curiosity / count
+                };
+            }
+            
             update(deltaTime) {
                 this.dayCounter += deltaTime;
                 
+                // Update all rats
                 for (let i = this.rats.length - 1; i >= 0; i--) {
                     let rat = this.rats[i];
                     rat.update(deltaTime, this);
                     
                     if (rat.shouldDie(this)) {
+                        if (rat === this.selectedRat) {
+                            this.selectedRat = null;
+                            this.updateSelectedRatDisplay();
+                        }
                         rat.destroy();
                         this.rats.splice(i, 1);
                         this.totalDeaths++;
@@ -728,17 +1360,23 @@
                     }
                 }
                 
-                this.calculateSocialInteractions();
+                this.calculateSocialInteractions(deltaTime);
                 this.processMating();
                 
+                // Daily reset
                 if (this.dayCounter >= 1) {
                     this.dailyBirths = 0;
                     this.dailyDeaths = 0;
                     this.dayCounter = 0;
                 }
+                
+                // Update current generation
+                if (this.rats.length > 0) {
+                    this.currentGeneration = Math.max(...this.rats.map(r => r.genetics.generation));
+                }
             }
             
-            calculateSocialInteractions() {
+            calculateSocialInteractions(deltaTime) {
                 for (let rat of this.rats) {
                     rat.socialInteractions = 0;
                     for (let other of this.rats) {
@@ -746,6 +1384,19 @@
                             let distance = rat.position.distanceTo(other.position);
                             if (distance < 0.5) {
                                 rat.socialInteractions++;
+                                
+                                // Genetic influence on social interactions
+                                let compatibilityFactor = 1 - Math.abs(rat.genetics.traits.sociability - other.genetics.traits.sociability);
+                                
+                                // Aggressive rats cause more stress to others
+                                if (other.genetics.traits.aggressiveness > 0.7) {
+                                    rat.stress += 0.5 * deltaTime;
+                                }
+                                
+                                // Social rats get benefits from interaction
+                                if (rat.genetics.traits.sociability > 0.6 && compatibilityFactor > 0.7) {
+                                    rat.stress = Math.max(0, rat.stress - 0.2 * deltaTime);
+                                }
                             }
                         }
                     }
@@ -772,8 +1423,17 @@
             }
             
             attemptMating(male, female) {
-                let successProb = male.dominance > 0.8 ? 0.85 : 0.25;
+                // Genetic compatibility affects mating success
+                let maleFitness = male.genetics.getFitness(this);
+                let femaleFitness = female.genetics.getFitness(this);
+                let baseProbability = (maleFitness + femaleFitness) / 2;
                 
+                // Dominance and genetic traits influence success
+                let successProb = baseProbability * (male.dominance > 0.8 ? 1.2 : 0.8);
+                successProb *= (1 + male.genetics.traits.reproductiveSuccess * 0.3);
+                successProb *= (1 + female.genetics.traits.reproductiveSuccess * 0.3);
+                
+                // Environmental factors
                 if (this.getPopulationDensity() > 0.8) successProb *= 0.6;
                 if (male.stress > 50 || female.stress > 50) successProb *= 0.7;
                 
@@ -821,6 +1481,7 @@
                 this.carryingCapacity = params.capacity;
                 this.foodAvailability = params.food / 100;
                 this.generalStress = (params.stress - 100) / 4;
+                this.mutationRate = params.mutation / 100;
             }
             
             onResize() {
@@ -846,7 +1507,7 @@
                 this.updateDisplay();
                 
                 setTimeout(() => this.start(), 1000);
-                debug('Simulation controller ready');
+                debug('Simulation controller ready with genetics system');
             }
             
             setupUI() {
@@ -857,6 +1518,10 @@
                     },
                     food: (val) => {
                         document.getElementById('foodVal').textContent = val + '%';
+                        this.updateParams();
+                    },
+                    mutation: (val) => {
+                        document.getElementById('mutationVal').textContent = val + '%';
                         this.updateParams();
                     },
                     speed: (val) => {
@@ -884,16 +1549,30 @@
                 document.getElementById('startBtn').addEventListener('click', () => this.start());
                 document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
                 document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                document.getElementById('selectRatBtn').addEventListener('click', () => this.toggleRatSelection());
                 
                 document.getElementById('topView').addEventListener('click', () => this.setTopView());
                 document.getElementById('sideView').addEventListener('click', () => this.setSideView());
                 document.getElementById('freeView').addEventListener('click', () => this.setFreeView());
             }
             
+            toggleRatSelection() {
+                this.environment.isSelecting = !this.environment.isSelecting;
+                const btn = document.getElementById('selectRatBtn');
+                if (this.environment.isSelecting) {
+                    btn.textContent = 'Cancel Select';
+                    btn.style.background = 'linear-gradient(45deg, #ff4444, #ff6666)';
+                } else {
+                    btn.textContent = 'Select Rat';
+                    btn.style.background = 'linear-gradient(45deg, #ff6b6b, #4ecdc4)';
+                }
+            }
+            
             updateParams() {
                 const params = {
                     capacity: parseInt(document.getElementById('capacity').value),
                     food: parseInt(document.getElementById('food').value),
+                    mutation: parseInt(document.getElementById('mutation').value),
                     stress: 100
                 };
                 this.environment.updateParameters(params);
@@ -934,10 +1613,13 @@
                 this.environment.totalDeaths = 0;
                 this.environment.dailyBirths = 0;
                 this.environment.dailyDeaths = 0;
+                this.environment.currentGeneration = 1;
+                this.environment.selectedRat = null;
                 
                 this.environment.initPopulation();
                 this.updateParams();
                 this.updateDisplay();
+                this.environment.updateSelectedRatDisplay();
                 debug('Simulation reset');
             }
             
@@ -960,6 +1642,9 @@
             startRenderLoop() {
                 const renderLoop = () => {
                     this.environment.render();
+                    if (this.environment.selectedRat) {
+                        this.environment.updateSelectedRatDisplay();
+                    }
                     requestAnimationFrame(renderLoop);
                 };
                 renderLoop();
@@ -967,22 +1652,58 @@
             
             updateDisplay() {
                 const stats = this.environment.getStatistics();
+                const avgTraits = this.environment.getAverageTraits();
+                const diversity = this.environment.calculateGeneticDiversity();
                 
+                // Basic stats
                 document.getElementById('totalPop').textContent = stats.totalPopulation;
                 document.getElementById('adults').textContent = stats.adults;
                 document.getElementById('juveniles').textContent = stats.juveniles;
                 document.getElementById('births').textContent = stats.birthRate;
                 document.getElementById('deaths').textContent = stats.deathRate;
                 
+                // Generation info
+                document.getElementById('currentGen').textContent = this.environment.currentGeneration;
+                document.getElementById('geneticDiversity').textContent = Math.min(100, diversity) + '%';
+                
+                // Behavioral status
                 document.getElementById('stressLevel').textContent = stats.stressLevel;
                 document.getElementById('aggressionLevel').textContent = stats.aggressionLevel;
                 document.getElementById('reproductionLevel').textContent = stats.reproductionLevel;
                 document.getElementById('cannibalismLevel').textContent = stats.cannibalismLevel;
                 
+                // Average genetics
+                const formatTrait = (val) => Math.round(val * 100) + '%';
+                const getTraitClass = (val) => {
+                    if (val > 0.75) return 'excellent';
+                    if (val < 0.25) return 'poor';
+                    return '';
+                };
+                
+                document.getElementById('avgAggressionVal').textContent = formatTrait(avgTraits.aggressiveness);
+                document.getElementById('avgAggression').className = 'trait-item ' + getTraitClass(avgTraits.aggressiveness);
+                
+                document.getElementById('avgStressResVal').textContent = formatTrait(avgTraits.stressResilience);
+                document.getElementById('avgStressRes').className = 'trait-item ' + getTraitClass(avgTraits.stressResilience);
+                
+                document.getElementById('avgSocialVal').textContent = formatTrait(avgTraits.sociability);
+                document.getElementById('avgSocial').className = 'trait-item ' + getTraitClass(avgTraits.sociability);
+                
+                document.getElementById('avgIntelligenceVal').textContent = formatTrait(avgTraits.intelligence);
+                document.getElementById('avgIntelligence').className = 'trait-item ' + getTraitClass(avgTraits.intelligence);
+                
+                document.getElementById('avgReproductionVal').textContent = formatTrait(avgTraits.reproductiveSuccess);
+                document.getElementById('avgReproduction').className = 'trait-item ' + getTraitClass(avgTraits.reproductiveSuccess);
+                
+                document.getElementById('avgCuriosityVal').textContent = formatTrait(avgTraits.curiosity);
+                document.getElementById('avgCuriosity').className = 'trait-item ' + getTraitClass(avgTraits.curiosity);
+                
+                // Research data
                 document.getElementById('density').textContent = stats.densityPercent + '%';
                 document.getElementById('interactions').textContent = stats.avgSocialInteractions;
                 document.getElementById('cortisol').textContent = stats.avgCorticosterone + '%';
                 
+                // Status indicators
                 const statusElements = {
                     stressStatus: stats.stressLevel === 'Critical',
                     aggressionStatus: stats.aggressionLevel === 'High',
@@ -1002,19 +1723,22 @@
                 const stats = this.environment.getStatistics();
                 const alertBox = document.getElementById('alertBox');
                 const alertMsg = document.getElementById('alertMsg');
+                const diversity = this.environment.calculateGeneticDiversity();
                 
                 let alert = null;
                 
-                if (stats.densityPercent >= 75 && stats.stressLevel === 'Critical') {
+                if (diversity < 20) {
+                    alert = 'GENETIC BOTTLENECK WARNING! Genetic diversity has fallen below 20%. Population at risk of inbreeding depression.';
+                } else if (stats.densityPercent >= 75 && stats.stressLevel === 'Critical') {
                     alert = 'BEHAVIORAL SINK DETECTED! Population density >75% with critical stress levels.';
+                } else if (this.environment.currentGeneration >= 5 && stats.reproductionLevel === 'Failing') {
+                    alert = 'EVOLUTIONARY PRESSURE: High generation count with reproductive failure. Natural selection in progress.';
                 } else if (stats.avgSocialInteractions > 12) {
                     alert = 'Social interaction threshold exceeded (>12 per rat). Behavioral breakdown threshold reached.';
                 } else if (stats.avgCorticosterone > 200) {
                     alert = 'Severe chronic stress detected. Corticosterone levels indicate pathological response.';
                 } else if (stats.cannibalismLevel === 'High') {
                     alert = 'High cannibalism risk due to overcrowding and stress.';
-                } else if (stats.reproductionLevel === 'Failing') {
-                    alert = 'Reproductive failure occurring. Population declining despite adequate resources.';
                 }
                 
                 if (alert) {
@@ -1053,7 +1777,7 @@
             if (!checkThreeJS()) return;
             
             try {
-                debug('All checks passed, initializing simulation...');
+                debug('All checks passed, initializing enhanced simulation...');
                 setTimeout(() => {
                     new SimulationController();
                 }, 200);
