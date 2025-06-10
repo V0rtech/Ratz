@@ -51,8 +51,37 @@
         }
         
         #debug {
-            position: absolute; top: 100px; left: 20px; background: rgba(0,0,0,0.9); padding: 10px;
-            border-radius: 4px; font-family: monospace; font-size: 0.8em; max-width: 400px; max-height: 200px; overflow-y: auto;
+            position: absolute; top: 100px; left: 20px; background: rgba(0,0,0,0.9); 
+            border-radius: 4px; font-family: monospace; font-size: 0.8em; 
+            max-width: 400px; max-height: 200px; overflow-y: auto;
+            border: 1px solid #333; z-index: 1000;
+        }
+        
+        #debugHeader {
+            background: rgba(255,255,255,0.1); padding: 5px 10px; cursor: move;
+            border-bottom: 1px solid #333; display: flex; justify-content: space-between;
+            align-items: center; user-select: none;
+        }
+        
+        #debugContent {
+            padding: 10px; transition: all 0.3s ease;
+        }
+        
+        #debugMinimize {
+            background: none; border: none; color: #4ecdc4; cursor: pointer;
+            font-size: 0.9em; padding: 2px 6px; border-radius: 2px;
+        }
+        
+        #debugMinimize:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        #debug.minimized #debugContent {
+            display: none;
+        }
+        
+        #debug.minimized {
+            max-height: none;
         }
 
         .generation-info {
@@ -168,19 +197,86 @@
         </div>
     </div>
 
-    <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan • Click rat when in select mode</div>
-    <div id="debug"></div>
+    <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan • Click rat when in select mode • F1: Toggle Debug</div>
+    <div id="debug">
+        <div id="debugHeader">
+            <span>🔧 Debug Log</span>
+            <button id="debugMinimize">−</button>
+        </div>
+        <div id="debugContent"></div>
+    </div>
 
     <script>
         function debug(msg) {
             console.log('🔧 ' + msg);
-            const debugEl = document.getElementById('debug');
+            const debugEl = document.getElementById('debugContent');
             if (debugEl) {
                 debugEl.innerHTML += '🔧 ' + msg + '<br>';
                 if (debugEl.innerHTML.split('<br>').length > 15) {
                     debugEl.innerHTML = debugEl.innerHTML.split('<br>').slice(-10).join('<br>');
                 }
+                debugEl.scrollTop = debugEl.scrollHeight;
             }
+        }
+
+        // Debug window controls
+        function setupDebugWindow() {
+            const debugWindow = document.getElementById('debug');
+            const debugHeader = document.getElementById('debugHeader');
+            const debugMinimize = document.getElementById('debugMinimize');
+            
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            // Minimize functionality
+            debugMinimize.addEventListener('click', (e) => {
+                e.stopPropagation();
+                debugWindow.classList.toggle('minimized');
+                debugMinimize.textContent = debugWindow.classList.contains('minimized') ? '+' : '−';
+            });
+            
+            // Drag functionality
+            debugHeader.addEventListener('mousedown', (e) => {
+                // Don't interfere with rat selection mode
+                if (window.environment && window.environment.isSelecting) return;
+                
+                isDragging = true;
+                const rect = debugWindow.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                debugHeader.style.cursor = 'grabbing';
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                
+                // Keep window within viewport bounds
+                const maxX = window.innerWidth - debugWindow.offsetWidth;
+                const maxY = window.innerHeight - debugWindow.offsetHeight;
+                
+                debugWindow.style.left = Math.max(0, Math.min(maxX, x)) + 'px';
+                debugWindow.style.top = Math.max(0, Math.min(maxY, y)) + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    debugHeader.style.cursor = 'move';
+                }
+            });
+            
+            // Keyboard shortcut to toggle debug window (F1 key)
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F1') {
+                    e.preventDefault();
+                    debugWindow.style.display = debugWindow.style.display === 'none' ? 'block' : 'none';
+                }
+            });
         }
 
         // Genetics and Psychology System
@@ -1498,6 +1594,7 @@
         class SimulationController {
             constructor() {
                 this.environment = new Environment();
+                window.environment = this.environment; // Global reference for debug window
                 this.isRunning = false;
                 this.speed = 3;
                 this.lastTime = 0;
@@ -1778,6 +1875,7 @@
             
             try {
                 debug('All checks passed, initializing enhanced simulation...');
+                setupDebugWindow(); // Initialize debug window controls
                 setTimeout(() => {
                     new SimulationController();
                 }, 200);
