@@ -132,6 +132,24 @@
         </div>
 
         <div class="control-group">
+            <h3>Day/Night Cycle</h3>
+            <div class="slider-row">
+                <label>Day Length: <span id="dayLengthVal">20s</span></label>
+                <input type="range" min="5" max="60" value="20" class="slider" id="dayLength">
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Time of Day:</span>
+                    <span id="timeDisplay" style="color: #4ecdc4; font-weight: bold;">12:00 PM</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Phase:</span>
+                    <span id="dayNightPhase" style="color: #4ecdc4; font-weight: bold;">Day</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
             <h3>Simulation</h3>
             <button class="button" id="startBtn">Start</button>
             <button class="button" id="pauseBtn">Pause</button>
@@ -200,7 +218,7 @@
     <div class="camera-info">Mouse: Rotate • Wheel: Zoom • Drag to Pan • Click rat when in select mode • F1: Toggle Debug</div>
     <div id="debug">
         <div id="debugHeader">
-            <span>🔧 Debug Log</span>
+            <span>Debug Log</span>
             <button id="debugMinimize">−</button>
         </div>
         <div id="debugContent"></div>
@@ -307,7 +325,11 @@
                         parentalCare: Math.random(),
                         forageEfficiency: Math.random(),
                         riskTaking: Math.random(),
-                        learningRate: Math.random()
+                        learningRate: Math.random(),
+                        
+                        // Circadian traits (0-1 scale)
+                        nocturnalPreference: 0.7 + Math.random() * 0.3, // Rats are mostly nocturnal
+                        sleepNeed: Math.random()
                     };
                 }
                 
@@ -490,6 +512,7 @@
                 const traits = this.genetics.traits;
                 
                 if (this.selected) return 0x00ff00;
+                if (this.state === 'sleeping') return 0x404040; // Dark gray for sleeping
                 if (this.age < 21) return 0xffeb3b; // Yellow for juveniles
                 
                 // Color based on psychological state and genetics
@@ -499,6 +522,7 @@
                 if (this.sex === 'female' && this.gestationDays > 0) return 0x9370db;
                 if (traits.intelligence > 0.8) return 0x228b22; // Green for intelligent
                 if (traits.stressResilience > 0.8) return 0xff8c00; // Orange for resilient
+                if (traits.nocturnalPreference > 0.9) return 0x2f4f4f; // Dark slate for highly nocturnal
                 
                 return 0x8b4513; // Default brown
             }
@@ -516,11 +540,12 @@
                 const traits = this.genetics.traits;
                 const psychMods = this.genetics.getPsychologicalModifiers();
                 
-                // Metabolism affected by genetics
+                // Metabolism affected by genetics and activity state
                 let consumption = 0.15 * (1 + traits.metabolism * 0.5);
-                if (this.state === 'foraging') consumption *= (1 + traits.forageEfficiency);
-                if (this.state === 'fleeing') consumption *= 2.0;
-                if (this.state === 'mating') consumption *= 1.5;
+                if (this.state === 'sleeping') consumption *= 0.3; // Much lower consumption when sleeping
+                else if (this.state === 'foraging') consumption *= (1 + traits.forageEfficiency);
+                else if (this.state === 'fleeing') consumption *= 2.0;
+                else if (this.state === 'mating') consumption *= 1.5;
                 
                 this.energy -= consumption * deltaTime;
                 this.energy = Math.max(0, Math.min(100, this.energy));
@@ -540,7 +565,11 @@
                 if (this.stress > 70) {
                     this.health -= 0.15 * deltaTime * (1 - traits.stressResilience * 0.5);
                 }
-                if (this.state === 'resting' && this.energy > 60) {
+                if (this.state === 'sleeping') {
+                    // Sleeping provides the best health recovery
+                    this.health += 0.12 * deltaTime * (1 + traits.immuneSystem * 0.3);
+                    this.stress = Math.max(0, this.stress - 0.4 * deltaTime * traits.stressResilience);
+                } else if (this.state === 'resting' && this.energy > 60) {
                     this.health += 0.08 * deltaTime * (1 + traits.immuneSystem * 0.3);
                     this.stress = Math.max(0, this.stress - 0.3 * deltaTime * traits.stressResilience);
                 }
@@ -631,29 +660,38 @@
                 const traits = this.genetics.traits;
                 this.lastStateChange += deltaTime;
                 
-                if (this.lastStateChange > 0.8) {
+                // Calculate circadian activity level
+                let activityLevel = this.calculateActivityLevel(environment);
+                
+                if (this.lastStateChange > (0.8 / activityLevel)) { // More frequent state changes when active
                     let prob = Math.random();
                     
+                    // Sleep behavior during inactive periods
+                    if (activityLevel < 0.3 && this.energy > 30) {
+                        this.state = 'sleeping';
+                    }
                     // Basic needs override psychology
-                    if (this.energy < 25) {
+                    else if (this.energy < 25) {
                         this.state = 'foraging';
                     } else if (this.stress > 75 || this.currentMood === 'fearful') {
                         this.state = 'fleeing';
                     } else if (this.health < 35) {
                         this.state = 'resting';
-                    } else if (this.canMate(environment) && prob < (0.25 * traits.reproductiveSuccess)) {
+                    } else if (this.canMate(environment) && prob < (0.25 * traits.reproductiveSuccess * activityLevel)) {
                         this.state = 'mating';
                     } else {
-                        // Genetic-influenced behavioral choices
-                        if (this.currentMood === 'aggressive' && prob < traits.aggressiveness * 0.3) {
+                        // Genetic-influenced behavioral choices (scaled by activity)
+                        if (this.currentMood === 'aggressive' && prob < traits.aggressiveness * 0.3 * activityLevel) {
                             this.state = 'territorial';
-                        } else if (traits.curiosity > 0.6 && prob < 0.15) {
+                        } else if (traits.curiosity > 0.6 && prob < 0.15 * activityLevel) {
                             this.state = 'exploring';
-                        } else if (traits.sociability > 0.7 && prob < 0.2) {
+                        } else if (traits.sociability > 0.7 && prob < 0.2 * activityLevel) {
                             this.state = 'socializing';
-                        } else if (this.state === 'resting' && prob < 0.15) {
+                        } else if (this.state === 'sleeping' && activityLevel > 0.5) {
+                            this.state = 'foraging'; // Wake up when it's time to be active
+                        } else if (this.state === 'resting' && prob < 0.15 * activityLevel) {
                             this.state = 'foraging';
-                        } else if (this.state === 'foraging' && prob < 0.08) {
+                        } else if (this.state === 'foraging' && prob < 0.08 / activityLevel) {
                             this.state = 'resting';
                         }
                     }
@@ -664,6 +702,25 @@
                 if (Math.random() < 0.015) {
                     this.socialInteractions = Math.max(0, this.socialInteractions - 1);
                 }
+            }
+            
+            calculateActivityLevel(environment) {
+                const traits = this.genetics.traits;
+                
+                // Base activity based on whether it's preferred time
+                let baseActivity;
+                if (environment.isNight) {
+                    baseActivity = traits.nocturnalPreference;
+                } else {
+                    baseActivity = 1 - traits.nocturnalPreference;
+                }
+                
+                // Modify based on needs
+                if (this.energy < 40) baseActivity *= 1.5; // Hungry rats stay active
+                if (this.stress > 60) baseActivity *= 0.7; // Stressed rats less active
+                if (this.health < 50) baseActivity *= 0.5; // Sick rats rest more
+                
+                return Math.max(0.1, Math.min(1.5, baseActivity));
             }
             
             canMate(environment) {
@@ -877,6 +934,8 @@
                         return baseSpeed * 1.1 * (1 + traits.aggressiveness * 0.3);
                     case 'socializing':
                         return baseSpeed * 0.7;
+                    case 'sleeping':
+                        return 0; // No movement when sleeping
                     case 'resting':
                         return baseSpeed * 0.2;
                     default:
@@ -963,13 +1022,18 @@
                 this.dayCounter = 0;
                 this.currentGeneration = 1;
                 
+                // Day/Night cycle system
+                this.timeOfDay = 0.5; // 0 = midnight, 0.5 = noon, 1 = midnight again
+                this.dayLength = 20; // seconds for full day cycle (adjustable)
+                this.isNight = false;
+                
                 this.selectedRat = null;
                 this.isSelecting = false;
                 
                 this.initScene();
                 this.createEnvironment();
                 this.initPopulation();
-                debug('Environment initialized with genetics system');
+                debug('Environment initialized with genetics and day/night system');
             }
             
             initScene() {
@@ -995,9 +1059,29 @@
                 this.directionalLight.castShadow = true;
                 this.scene.add(this.directionalLight);
                 
+                // Create sun and moon objects
+                this.createSunMoon();
+                
                 this.setupControls();
                 window.addEventListener('resize', () => this.onResize(), false);
                 debug('3D scene initialized');
+            }
+            
+            createSunMoon() {
+                // Sun
+                const sunGeo = new THREE.SphereGeometry(0.8, 16, 12);
+                const sunMat = new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.3 });
+                this.sun = new THREE.Mesh(sunGeo, sunMat);
+                this.sun.position.set(0, 15, 0);
+                this.scene.add(this.sun);
+                
+                // Moon
+                const moonGeo = new THREE.SphereGeometry(0.6, 16, 12);
+                const moonMat = new THREE.MeshBasicMaterial({ color: 0xccccff, emissive: 0x444477, emissiveIntensity: 0.2 });
+                this.moon = new THREE.Mesh(moonGeo, moonMat);
+                this.moon.position.set(0, -15, 0); // Start below horizon
+                this.moon.visible = false;
+                this.scene.add(this.moon);
             }
             
             setupControls() {
@@ -1154,6 +1238,13 @@
                         <div>Learning Rate: <span style="color: ${getTraitColor(traits.learningRate)}">${formatTrait(traits.learningRate)}%</span></div>
                     </div>
                     
+                    <h4 style="color: #ff9800; margin: 10px 0 5px 0;">Circadian Traits</h4>
+                    <div style="font-size: 0.8em;">
+                        <div>Nocturnal Preference: <span style="color: ${getTraitColor(traits.nocturnalPreference)}">${formatTrait(traits.nocturnalPreference)}%</span></div>
+                        <div>Sleep Need: <span style="color: ${getTraitColor(traits.sleepNeed)}">${formatTrait(traits.sleepNeed)}%</span></div>
+                        <div>Activity Level: <span style="color: #4ecdc4">${Math.round(rat.calculateActivityLevel(this) * 100)}%</span></div>
+                    </div>
+                    
                     <div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 0.8em;">
                         <strong>Current State:</strong> ${rat.state}<br>
                         <strong>Mood:</strong> ${rat.currentMood}<br>
@@ -1165,7 +1256,7 @@
             }
             
             createEnvironment() {
-                // [Same environment creation code as before]
+                // Remove old environment objects
                 const objectsToRemove = [];
                 this.scene.traverse((child) => {
                     if (child.userData && child.userData.isEnvironment) {
@@ -1174,22 +1265,38 @@
                 });
                 objectsToRemove.forEach(obj => this.scene.remove(obj));
                 
+                // Set simple background colors (no dynamic changes)
                 switch (this.environmentType) {
-                    case 'lab': this.createLabEnvironment(); break;
-                    case 'forest': this.createForestEnvironment(); break;
-                    case 'urban': this.createUrbanEnvironment(); break;
-                    case 'sewer': this.createSewerEnvironment(); break;
-                    case 'barn': this.createBarnEnvironment(); break;
-                    case 'universe25': this.createUniverse25Environment(); break;
+                    case 'lab': 
+                        this.scene.background = new THREE.Color(0xf0f0f0);
+                        this.createLabEnvironment(); 
+                        break;
+                    case 'forest': 
+                        this.scene.background = new THREE.Color(0x87ceeb);
+                        this.createForestEnvironment(); 
+                        break;
+                    case 'urban': 
+                        this.scene.background = new THREE.Color(0x696969);
+                        this.createUrbanEnvironment(); 
+                        break;
+                    case 'sewer': 
+                        this.scene.background = new THREE.Color(0x2f2f2f);
+                        this.createSewerEnvironment(); 
+                        break;
+                    case 'barn': 
+                        this.scene.background = new THREE.Color(0xdeb887);
+                        this.createBarnEnvironment(); 
+                        break;
+                    case 'universe25': 
+                        this.scene.background = new THREE.Color(0xf5f5f5);
+                        this.createUniverse25Environment(); 
+                        break;
                 }
                 
                 debug(`Environment created: ${this.environmentType}`);
             }
             
-            // [Include all the createXEnvironment methods from the original code]
             createLabEnvironment() {
-                this.scene.background = new THREE.Color(0xf0f0f0);
-                
                 const floorGeo = new THREE.PlaneGeometry(10, 10);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1203,8 +1310,6 @@
             }
             
             createForestEnvironment() {
-                this.scene.background = new THREE.Color(0x228b22);
-                
                 const floorGeo = new THREE.PlaneGeometry(15, 15);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0x3e2723 });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1231,8 +1336,6 @@
             }
             
             createUrbanEnvironment() {
-                this.scene.background = new THREE.Color(0x1a1a1a);
-                
                 const floorGeo = new THREE.PlaneGeometry(12, 8);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1251,8 +1354,6 @@
             }
             
             createSewerEnvironment() {
-                this.scene.background = new THREE.Color(0x0f0f0f);
-                
                 const floorGeo = new THREE.PlaneGeometry(10, 10);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0x2d2d2d });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1270,8 +1371,6 @@
             }
             
             createBarnEnvironment() {
-                this.scene.background = new THREE.Color(0x8b4513);
-                
                 const floorGeo = new THREE.PlaneGeometry(20, 15);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1290,8 +1389,6 @@
             }
             
             createUniverse25Environment() {
-                this.scene.background = new THREE.Color(0xe0e0e0);
-                
                 const floorGeo = new THREE.PlaneGeometry(4, 4);
                 const floorMat = new THREE.MeshLambertMaterial({ color: 0xf8f8f8 });
                 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -1439,6 +1536,9 @@
             update(deltaTime) {
                 this.dayCounter += deltaTime;
                 
+                // Update day/night cycle
+                this.updateDayNightCycle(deltaTime);
+                
                 // Update all rats
                 for (let i = this.rats.length - 1; i >= 0; i--) {
                     let rat = this.rats[i];
@@ -1469,6 +1569,36 @@
                 // Update current generation
                 if (this.rats.length > 0) {
                     this.currentGeneration = Math.max(...this.rats.map(r => r.genetics.generation));
+                }
+            }
+            
+            updateDayNightCycle(deltaTime) {
+                // Update time of day (0 to 1, where 0.5 is noon)
+                this.timeOfDay += deltaTime / this.dayLength;
+                if (this.timeOfDay >= 1) this.timeOfDay -= 1;
+                
+                // Determine if it's night (roughly 6pm to 6am)
+                this.isNight = this.timeOfDay < 0.25 || this.timeOfDay > 0.75;
+                
+                // Move sun and moon across the sky
+                let angle = this.timeOfDay * Math.PI * 2 - Math.PI / 2; // Start at sunrise
+                let radius = 12;
+                let height = Math.sin(angle) * radius;
+                let distance = Math.cos(angle) * radius;
+                
+                if (!this.isNight) {
+                    // Day time - show sun
+                    this.sun.position.set(distance, Math.max(2, height + 5), 0);
+                    this.sun.visible = true;
+                    this.moon.visible = false;
+                } else {
+                    // Night time - show moon
+                    let nightAngle = angle + Math.PI; // Moon is opposite sun
+                    let moonHeight = Math.sin(nightAngle) * radius;
+                    let moonDistance = Math.cos(nightAngle) * radius;
+                    this.moon.position.set(moonDistance, Math.max(2, moonHeight + 5), 0);
+                    this.moon.visible = true;
+                    this.sun.visible = false;
                 }
             }
             
@@ -1621,6 +1751,10 @@
                         document.getElementById('mutationVal').textContent = val + '%';
                         this.updateParams();
                     },
+                    dayLength: (val) => {
+                        document.getElementById('dayLengthVal').textContent = val + 's';
+                        this.environment.dayLength = parseInt(val);
+                    },
                     speed: (val) => {
                         document.getElementById('speedVal').textContent = val + 'x';
                         this.speed = parseInt(val);
@@ -1752,6 +1886,9 @@
                 const avgTraits = this.environment.getAverageTraits();
                 const diversity = this.environment.calculateGeneticDiversity();
                 
+                // Update time display
+                this.updateTimeDisplay();
+                
                 // Basic stats
                 document.getElementById('totalPop').textContent = stats.totalPopulation;
                 document.getElementById('adults').textContent = stats.adults;
@@ -1814,6 +1951,24 @@
                         element.className = statusElements[id] ? 'status-item critical' : 'status-item';
                     }
                 });
+            }
+            
+            updateTimeDisplay() {
+                // Convert timeOfDay (0-1) to 12-hour format
+                let hours24 = this.environment.timeOfDay * 24;
+                let hours12 = Math.floor(hours24) % 12;
+                if (hours12 === 0) hours12 = 12;
+                let minutes = Math.floor((hours24 % 1) * 60);
+                let ampm = hours24 < 12 ? 'AM' : 'PM';
+                
+                let timeString = `${hours12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+                document.getElementById('timeDisplay').textContent = timeString;
+                
+                // Update day/night phase
+                let phase = this.environment.isNight ? 'Night' : 'Day';
+                let phaseElement = document.getElementById('dayNightPhase');
+                phaseElement.textContent = phase;
+                phaseElement.style.color = this.environment.isNight ? '#6666aa' : '#ffaa00';
             }
             
             checkAlerts() {
